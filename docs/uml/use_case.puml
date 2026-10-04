@@ -1,0 +1,79 @@
+@startuml UseCaseDiagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam actorStyle awesome
+
+actor "Mahasiswa / Pelanggan\n(Customer)" as Customer
+actor "Pedagang Kantin\n(Tenant / Merchant)" as Tenant
+actor "Pengelola Sistem\n(Administrator)" as Admin
+
+rectangle "FoodQueue: Platform Pre-Order & Scheduled Pickup" {
+  ' Customer Use Cases
+  package "Aktivitas Pelanggan (Customer Area)" {
+    usecase "UC-01: Registrasi & Login Akun" as UC_Auth
+    usecase "UC-02: Eksplorasi Menu & Stand Food Court" as UC_Browse
+    usecase "UC-03: Kelola Keranjang Belanja (Cart)" as UC_Cart
+    usecase "UC-04: Pilih Slot Waktu Pickup (15 Menit)" as UC_Slot
+    usecase "UC-05: Checkout & Pembayaran Nontunai (Mock/QRIS)" as UC_Checkout
+    usecase "UC-06: Pantau Status Pesanan Real-time" as UC_Track
+    usecase "UC-07: Pengambilan Makanan via QR Code" as UC_Pickup
+    usecase "UC-08: Berikan Ulasan & Rating" as UC_Review
+    usecase "UC-09: Batalkan Pesanan (Sebelum Dimasak)" as UC_Cancel
+  }
+
+  ' Tenant Use Cases
+  package "Operasional Dapur & Stand (Tenant Area)" {
+    usecase "UC-10: Pendaftaran Stand Tenant" as UC_TenantReg
+    usecase "UC-11: Kelola Katalog Menu & Sisa Porsi" as UC_Menu
+    usecase "UC-12: Monitor Batch Masak Dapur (SDG 12)" as UC_Kitchen
+    usecase "UC-13: Perbarui Status Pesanan (Dimasak / Siap)" as UC_StatusUpdate
+    usecase "UC-14: Verifikasi QR Code / Kode Ambil Manual" as UC_VerifyPickup
+    usecase "UC-15: Atur Kapasitas Slot & Jam Buka Toko" as UC_SlotConfig
+    usecase "UC-16: Pantau Laporan Penjualan & Ulasan" as UC_TenantReport
+  }
+
+  ' Admin Use Cases
+  package "Pengawasan & Tata Kelola (Admin Area)" {
+    usecase "UC-17: Verifikasi / Persetujuan Stand Tenant" as UC_AdminVerifyTenant
+    usecase "UC-18: Manajemen Akun Pengguna & Penangguhan" as UC_AdminUsers
+    usecase "UC-19: Pantau Metrik Keberlanjutan SDG 8, 11, 12" as UC_AdminSDG
+    usecase "UC-20: Pengawasan Seluruh Transaksi Kampus" as UC_AdminOrders
+    usecase "UC-21: Konfigurasi Parameter Sistem & Biaya" as UC_AdminSettings
+  }
+}
+
+' Customer relations
+Customer --> UC_Auth
+Customer --> UC_Browse
+Customer --> UC_Cart
+Customer --> UC_Slot
+Customer --> UC_Checkout
+Customer --> UC_Track
+Customer --> UC_Pickup
+Customer --> UC_Review
+Customer --> UC_Cancel
+
+UC_Checkout ..> UC_Slot : <<include>>
+UC_Pickup ..> UC_Track : <<extend>>
+
+' Tenant relations
+Tenant --> UC_Auth
+Tenant --> UC_TenantReg
+Tenant --> UC_Menu
+Tenant --> UC_Kitchen
+Tenant --> UC_StatusUpdate
+Tenant --> UC_VerifyPickup
+Tenant --> UC_SlotConfig
+Tenant --> UC_TenantReport
+
+' Admin relations
+Admin --> UC_Auth
+Admin --> UC_AdminVerifyTenant
+Admin --> UC_AdminUsers
+Admin --> UC_AdminSDG
+Admin --> UC_AdminOrders
+Admin --> UC_AdminSettings
+
+@enduml

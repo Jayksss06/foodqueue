@@ -1,0 +1,32 @@
+@startuml OrderStateMachine
+skinparam shadowing false
+skinparam roundcorner 8
+
+[*] --> PENDING_PAYMENT : Checkout Dibuat\n(Reservasi Stok & Kuota Slot)
+
+PENDING_PAYMENT --> PAID : Pembayaran Berhasil\n(QRIS / VA / E-Wallet)
+PENDING_PAYMENT --> CANCELLED : Dibatalkan Pelanggan\n(Batas Waktu Bayar Habis / Berubah Pikiran)
+
+PAID --> ACCEPTED : Dikonfirmasi Tenant
+PAID --> PREPARING : Tenant Langsung Mulai Masak
+PAID --> REJECTED : Ditolak Tenant (Bahan Habis Mendadak)
+PAID --> CANCELLED : Dibatalkan Pelanggan (Sebelum Dimasak)
+
+ACCEPTED --> PREPARING : Tenant Mulai Memasak
+ACCEPTED --> CANCELLED : Dibatalkan Pelanggan
+ACCEPTED --> REJECTED : Ditolak Tenant
+
+PREPARING --> READY_FOR_PICKUP : Masakan Selesai\n(Kirim Notifikasi & QR Code)
+note right of PREPARING : Pembatalan dilarang saat\nstatus sudah PREPARING
+
+READY_FOR_PICKUP --> COMPLETED : QR Code Diverifikasi Kasir\n(Makanan Diterima)
+READY_FOR_PICKUP --> NO_SHOW : Batas Grace Period Lewat\n(Pelanggan Tidak Hadir)
+
+REJECTED --> REFUNDED : Pengembalian Dana Otomatis
+
+COMPLETED --> [*] : Berikan Rating & Ulasan
+CANCELLED --> [*] : Slot & Stok Dipulihkan
+REFUNDED --> [*]
+NO_SHOW --> [*]
+
+@enduml

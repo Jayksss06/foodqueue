@@ -1,0 +1,164 @@
+@startuml ClassDiagram
+skinparam classAttributeIconSize 0
+skinparam roundcorner 8
+skinparam shadowing false
+
+enum Role {
+  CUSTOMER
+  TENANT
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+  REJECTED
+  REFUNDED
+  NO_SHOW
+}
+
+enum SlotStatus {
+  OPEN
+  CLOSED
+}
+
+enum MenuStatus {
+  AVAILABLE
+  UNAVAILABLE
+  OUT_OF_STOCK
+}
+
+class User {
+  - id: String
+  - name: String
+  - email: String
+  - passwordHash: String
+  - role: Role
+  - phone: String
+  - status: UserStatus
+  - sessionVersion: Int
+  + register(): User
+  + login(): Token
+}
+
+class Tenant {
+  - id: String
+  - name: String
+  - slug: String
+  - description: String
+  - location: String
+  - status: TenantStatus
+  - defaultPreparationTime: Int
+  - slotDurationMinutes: Int
+  - maxOrdersPerSlot: Int
+  - isAcceptingOrders: Boolean
+  - ratingAvg: Float
+  - ratingCount: Int
+  + updateProfile(): void
+  + configureOperatingHours(): void
+}
+
+class TenantOperatingHour {
+  - id: String
+  - tenantId: String
+  - dayOfWeek: Int
+  - openTime: String
+  - closeTime: String
+  - isClosed: Boolean
+}
+
+class Menu {
+  - id: String
+  - tenantId: String
+  - categoryId: String
+  - name: String
+  - description: String
+  - price: Int
+  - stock: Int
+  - preparationTime: Int
+  - status: MenuStatus
+  + adjustStock(qty: Int): void
+}
+
+class PickupSlot {
+  - id: String
+  - tenantId: String
+  - date: Date
+  - startAt: DateTime
+  - endAt: DateTime
+  - capacity: Int
+  - currentOrders: Int
+  - status: SlotStatus
+  + isAvailable(): Boolean
+  + incrementCapacity(): void
+  + decrementCapacity(): void
+}
+
+class Order {
+  - id: String
+  - orderNumber: String
+  - userId: String
+  - tenantId: String
+  - pickupSlotId: String
+  - subtotal: Int
+  - fee: Int
+  - total: Int
+  - status: OrderStatus
+  - pickupCode: String
+  - idempotencyKey: String
+  - expiresAt: DateTime
+  - createdAt: DateTime
+  + transitionTo(next: OrderStatus): void
+  + cancel(reason: String): void
+}
+
+class OrderItem {
+  - id: String
+  - orderId: String
+  - menuId: String
+  - menuNameSnapshot: String
+  - priceSnapshot: Int
+  - quantity: Int
+  - subtotal: Int
+  - notes: String
+}
+
+class Payment {
+  - id: String
+  - orderId: String
+  - amount: Int
+  - method: PaymentMethod
+  - status: PaymentStatus
+  - paymentRef: String
+}
+
+class Review {
+  - id: String
+  - orderId: String
+  - userId: String
+  - tenantId: String
+  - rating: Int
+  - comment: String
+}
+
+' Relationships
+User "1" -- "0..1" Tenant : owns >
+Tenant "1" *-- "7" TenantOperatingHour : configures >
+Tenant "1" *-- "0..*" Menu : offers >
+Tenant "1" *-- "0..*" PickupSlot : generates >
+
+User "1" -- "0..*" Order : places >
+Tenant "1" -- "0..*" Order : processes >
+PickupSlot "1" -- "0..*" Order : scheduled for >
+
+Order "1" *-- "1..*" OrderItem : contains >
+Menu "1" -- "0..*" OrderItem : snapshots to >
+Order "1" -- "1" Payment : has >
+Order "1" -- "0..1" Review : receives >
+
+@enduml

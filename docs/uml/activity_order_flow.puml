@@ -1,0 +1,78 @@
+@startuml ActivityOrderFlow
+skinparam shadowing false
+skinparam roundcorner 8
+
+|Mahasiswa (Customer)|
+start
+:Buka Katalog Food Court Kampus;
+:Pilih Menu Hidangan & Masukkan ke Keranjang;
+:Buka Halaman Checkout;
+:Pilih Tanggal & Jendela Slot Waktu Pengambilan;
+
+|Sistem (FoodQueue)|
+:Evaluasi Lead Time & Sisa Kapasitas Slot;
+if (Kapasitas Slot Masih Tersedia?) then (Ya)
+  :Tampilkan Ringkasan & Total Tagihan (Subtotal + Layanan);
+else (Penuh / Tidak Cukup Waktu)
+  :Tampilkan Peringatan Slot Penuh / Lewat Batas;
+  stop
+endif
+
+|Mahasiswa (Customer)|
+:Klik Buat Pesanan (Checkout);
+
+|Sistem (FoodQueue)|
+:Kunci Stok Porsi & Alokasikan Slot Secara Atomik;
+:Generate Nomor Pesanan & Batas Bayar (15 Menit);
+:Status: PENDING_PAYMENT;
+
+|Mahasiswa (Customer)|
+:Lakukan Pembayaran (QRIS / VA / E-Wallet Simulator);
+
+|Sistem (FoodQueue)|
+:Verifikasi Bukti Pembayaran;
+if (Pembayaran Berhasil?) then (Sukses)
+  :Ubah Status Pesanan ke PAID;
+  :Kirim Notifikasi Real-time ke Dapur Tenant;
+else (Gagal / Expired)
+  :Ubah Status ke CANCELLED / EXPIRED;
+  :Kembalikan Stok Porsi & Kuota Slot;
+  stop
+endif
+
+|Pedagang (Tenant)|
+:Lihat Pesanan di Batch Masak Dapur;
+:Klik "Mulai Masak" (Status: PREPARING);
+:Selesaikan Masakan;
+:Klik "Siap Diambil" (Status: READY_FOR_PICKUP);
+
+|Sistem (FoodQueue)|
+:Generate QR Code Pickup & 6 Karakter Kode Manual;
+:Kirim Notifikasi ke Mahasiswa: "Makanan Siap Diambil";
+
+|Mahasiswa (Customer)|
+:Tiba di Stand Sesuai Slot Waktu;
+:Tunjukkan QR Code / Sebutkan Kode Ambil;
+
+|Pedagang (Tenant)|
+:Scan QR Code atau Input 6 Karakter Manual;
+
+|Sistem (FoodQueue)|
+:Verifikasi Validitas Kode & Kepemilikan Tenant;
+if (Kode Valid?) then (Valid)
+  :Ubah Status Pesanan ke COMPLETED;
+  :Catat Timestamp Serah Terima Makanan;
+else (Salah / Sudah Digunakan)
+  :Tampilkan Pesan Error Verifikasi;
+  stop
+endif
+
+|Pedagang (Tenant)|
+:Serahkan Makanan Hangat ke Mahasiswa;
+
+|Mahasiswa (Customer)|
+:Terima Makanan Tanpa Perlu Antre Fisik;
+:Berikan Rating ⭐ & Ulasan Layanan;
+
+stop
+@enduml

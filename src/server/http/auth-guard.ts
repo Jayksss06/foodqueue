@@ -1,0 +1,84 @@
+import { NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
+import { verifySessionToken, COOKIE_NAME } from '@/lib/jwt';
+import { prisma } from '@/lib/prisma';
+import { Role, UserSession } from '@/types';
+import { apiForbidden, apiUnauthorized } from './response';
+
+export interface AuthContext {
+  user: UserSession;
+}
+
+export interface AuthOptions {
+  roles?: Role[];
+}
+
+/**
+ * Extract authenticated user session from HTTP cookies and verify against database.
+ */
+export async function getAuthenticatedUser(req?: NextRequest): Promise<UserSession | null> {
+  let token: string | undefined;
+
+  if (req) {
+    token = req.cookies.get(COOKIE_NAME)?.value;
+  } else {
+    const cookieStore = await cookies();
+    token = cookieStore.get(COOKIE_NAME)?.value;
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  const payload = await verifySessionToken(token);
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    // Verify user still exists, is ACTIVE, and session version matches (handles remote logout / password reset)
+    const dbUser = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: { tenant: { select: { id: true, status: true } } },
+    });
+
+    if (!dbUser || dbUser.status !== 'ACTIVE' || dbUser.sessionVersion !== payload.sessionVersion) {
+      return null;
+    }
+
+    return {
+      id: dbUser.id,
+      name: dbUser.name,
+      email: dbUser.email,
+      role: dbUser.role as Role,
+      status: dbUser.status as UserSession['status'],
+      sessionVersion: dbUser.sessionVersion,
+      tenantId: dbUser.tenant?.id ?? null,
+    };
+  } catch (error) {
+    console.error('Auth verification error:', error);
+    return null;
+  }
+}
+
+/**
+ * Higher-order wrapper for Route Handlers enforcing authentication and role permissions.
+ */
+export function withAuth(
+  handler: (req: NextRequest, ctx: AuthContext) => Promise<Response>,
+  options?: AuthOptions
+) {
+  return async (req: NextRequest): Promise<Response> => {
+    const user = await getAuthenticatedUser(req);
+
+    if (!user) {
+      return apiUnauthorized();
+    }
+
+    if (options?.roles && !options.roles.includes(user.role)) {
+      return apiForbidden('Anda tidak memiliki izin untuk mengakses resource ini.');
+    }
+
+    return handler(req, { user });
+  };
+}

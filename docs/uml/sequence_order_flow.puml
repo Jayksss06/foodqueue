@@ -1,0 +1,70 @@
+@startuml SequenceOrderFlow
+skinparam shadowing false
+skinparam roundcorner 8
+autonumber
+
+actor "Mahasiswa" as Customer
+boundary "Web Client (Next.js)" as Frontend
+control "Order Controller" as OrderAPI
+entity "Order Service" as OrderSvc
+entity "Slot Service" as SlotSvc
+database "PostgreSQL (Prisma)" as Database
+actor "Tenant / Dapur" as Tenant
+
+== 1. Checkout & Reservasi Atomik ==
+Customer -> Frontend : Klik "Pesan Sekarang" (Slot + Keranjang)
+Frontend -> OrderAPI : POST /api/orders { pickupSlotId, items, idempotencyKey }
+OrderAPI -> OrderSvc : createOrder(user, payload)
+OrderSvc -> SlotSvc : validateSlotAvailability(slotId, totalPrepMinutes)
+
+OrderSvc -> Database : BEGIN TRANSACTION
+note right of OrderSvc: Isolasi Atomik Conditional Update\n(Stok Menu >= QTY && Slot Current < Capacity)
+OrderSvc -> Database : UPDATE menus SET stock = stock - qty WHERE id = ? AND stock >= ?
+OrderSvc -> Database : UPDATE pickup_slots SET currentOrders = currentOrders + 1 WHERE id = ? AND currentOrders < capacity
+OrderSvc -> Database : INSERT INTO orders (orderNumber, status='PENDING_PAYMENT', ...)
+OrderSvc -> Database : INSERT INTO order_items (...)
+OrderSvc -> Database : COMMIT TRANSACTION
+
+OrderSvc --> OrderAPI : Order Created (ID, Total, ExpiresAt)
+OrderAPI --> Frontend : 201 Created (Redirect /orders/:id/pay)
+Frontend --> Customer : Tampilkan Halaman Bayar & Countdown 15 Menit
+
+== 2. Pembayaran Nontunai ==
+Customer -> Frontend : Pilih Metode (QRIS) & Klik "Simulasi Bayar"
+Frontend -> OrderAPI : POST /api/payments/:id/simulate { action: "SUCCESS" }
+OrderAPI -> Database : UPDATE payments SET status = 'PAID'
+OrderAPI -> OrderSvc : changeOrderStatus(orderId, 'PAID')
+OrderSvc -> Database : UPDATE orders SET status = 'PAID', paidAt = NOW()
+OrderSvc -> Database : INSERT INTO order_status_logs (...)
+OrderSvc -> Database : INSERT INTO notifications (target=Tenant)
+OrderAPI --> Frontend : 200 OK (Payment Verified)
+Frontend --> Customer : Status Berubah: Menunggu Konfirmasi Dapur
+
+== 3. Persiapan & Notifikasi Siap Ambil ==
+Tenant -> Frontend : Lihat Pesanan Masuk di Dashboard
+Tenant -> Frontend : Klik "Mulai Masak"
+Frontend -> OrderAPI : PATCH /api/tenant/orders/:id/status { to: 'PREPARING' }
+OrderAPI -> Database : UPDATE orders SET status = 'PREPARING'
+
+Tenant -> Frontend : Masakan Selesai -> Klik "Siap Diambil"
+Frontend -> OrderAPI : PATCH /api/tenant/orders/:id/status { to: 'READY_FOR_PICKUP' }
+OrderAPI -> Database : UPDATE orders SET status = 'READY_FOR_PICKUP', readyAt = NOW()
+OrderAPI -> Database : INSERT INTO notifications (target=Customer)
+
+== 4. Pengambilan di Stand & Verifikasi QR ==
+Customer -> Frontend : Buka Halaman Pesanan (Status: READY_FOR_PICKUP)
+Frontend -> OrderAPI : GET /api/orders/:id
+OrderAPI --> Frontend : Return Data + QR Code Data URL (Base64)
+Frontend --> Customer : Tampilkan QR Code & Kode Pengambilan (e.g. 7K9X2B)
+
+Customer -> Tenant : Tunjukkan QR Code di Stand
+Tenant -> Frontend : Pindai QR / Input Kode Manual
+Frontend -> OrderAPI : POST /api/tenant/pickup/verify { code: "7K9X2B" }
+OrderAPI -> Database : SELECT FROM orders WHERE pickupCode = ? AND tenantId = ?
+OrderAPI -> Database : UPDATE orders SET status = 'COMPLETED', completedAt = NOW()
+OrderAPI -> Database : INSERT INTO order_status_logs (...)
+OrderAPI --> Frontend : 200 OK (Verified Successfully)
+Frontend --> Tenant : Tampilkan Pop-up Hijau Sukses Serah Terima
+Tenant -> Customer : Serahkan Makanan Hangat
+
+@enduml
