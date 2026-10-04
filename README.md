@@ -57,11 +57,10 @@ Di halaman login (`/login`), tersedia tombol **1-Click Demo Login** untuk memuda
 
 | Peran | Akun Email | Kata Sandi | Keterangan |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@foodqueue.ac.id` | `password123` | Akses penuh dashboard admin & SDG impact |
-| **Tenant** | `busari@warung.com` | `password123` | Dapur Warung Bu Sari (Lantai 2, Stand A-03) |
-| **Tenant** | `kencana@kuliner.com` | `password123` | Dapur Ayam Kencana (Lantai 2, Stand B-01) |
-| **Customer** | `rina@student.ac.id` | `password123` | Akun mahasiswa (sudah ada riwayat pesanan) |
-| **Customer** | `budi@student.ac.id` | `password123` | Akun mahasiswa untuk uji coba pesanan baru |
+| **Admin** | `admin@foodqueue.id` | `Admin123!` | Akses penuh dashboard admin & SDG impact |
+| **Tenant** | `tenant.sari@foodqueue.id` | `Tenant123!` | Dapur Warung Bu Sari (Lantai 2, Stand A-03) |
+| **Tenant** | `tenant.kencana@foodqueue.id` | `Tenant123!` | Dapur Ayam Kencana (Lantai 2, Stand B-01) |
+| **Customer** | `rina@mahasiswa.ac.id` | `User123!` | Akun mahasiswa (sudah ada riwayat pesanan) |
 
 ---
 
