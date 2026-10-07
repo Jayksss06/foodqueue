@@ -1,0 +1,40 @@
+@startuml DeploymentDiagram
+skinparam roundcorner 8
+skinparam shadowing false
+
+node "User Device\n(Smartphone / Laptop)" as ClientNode {
+  artifact "Web Browser\n(Chrome, Safari, Edge)" as Browser {
+    component "Single Page Application (SPA)\nNext.js Client Bundle + Vanilla CSS" as ReactApp
+  }
+}
+
+node "Vercel Cloud Platform (Edge Network & Serverless)" as VercelNode {
+  node "Vercel Global CDN (Edge Cache)" as CDN {
+    artifact "Static Assets & CSS\n(/_next/static, icons, images)" as StaticFiles
+  }
+
+  node "Serverless Execution Environment\n(Node.js 20+ Runtime)" as ServerlessEnv {
+    artifact "Next.js 16 App Router\nServer Components & API Handlers" as NextServer
+    artifact "@prisma/client (ORM Engine)\nConnection Pooling Manager" as PrismaEngine
+  }
+}
+
+node "Neon Cloud Infrastructure\n(AWS ap-southeast-1, Singapore)" as NeonNode {
+  node "PgBouncer Connection Pooler" as PgBouncer {
+    port "Port 5432 (SSL/TLS)" as PoolerPort
+  }
+
+  database "Serverless PostgreSQL Instance\n(Database: neondb)" as PostgresDB {
+    folder "Relational Storage (33+ MB)\n18 Tables: users, orders, slots, menus..." as StorageData
+  }
+}
+
+' Physical connections and network protocols
+Browser -- CDN : HTTPS (Port 443)\nTLS 1.3 / HTTP/2
+Browser -- NextServer : HTTPS / JSON API\nCookie: fq_session (JWT)
+
+NextServer --> PrismaEngine : In-Memory Function Call
+PrismaEngine -- PoolerPort : TCP / SSL Connection Pool\nDATABASE_URL (neondb_owner)
+PoolerPort --> PostgresDB : Internal Unix Socket / TCP
+
+@enduml

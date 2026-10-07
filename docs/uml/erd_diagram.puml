@@ -1,0 +1,262 @@
+@startuml ERD_Diagram
+!theme plain
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam linetype ortho
+
+entity "users" as users {
+  * id : VARCHAR(36) [PK]
+  --
+  * name : VARCHAR(255)
+  * email : VARCHAR(255) [UNIQUE]
+  * password_hash : VARCHAR(255)
+  * role : ENUM('CUSTOMER', 'TENANT', 'ADMIN')
+  phone : VARCHAR(30)
+  * status : ENUM('ACTIVE', 'SUSPENDED')
+  * session_version : INT
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "venues" as venues {
+  * id : VARCHAR(36) [PK]
+  --
+  * name : VARCHAR(255)
+  address : TEXT
+  campus_name : VARCHAR(255)
+  * created_at : TIMESTAMP
+}
+
+entity "tenants" as tenants {
+  * id : VARCHAR(36) [PK]
+  --
+  * owner_id : VARCHAR(36) [FK -> users.id, UNIQUE]
+  * venue_id : VARCHAR(36) [FK -> venues.id]
+  * name : VARCHAR(255)
+  * slug : VARCHAR(255) [UNIQUE]
+  description : TEXT
+  * location : VARCHAR(255)
+  logo_url : TEXT
+  * default_preparation_time : INT
+  * slot_duration_minutes : INT
+  * max_orders_per_slot : INT
+  * is_accepting_orders : BOOLEAN
+  * status : ENUM('PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED', 'REJECTED')
+  * rating_avg : FLOAT
+  * rating_count : INT
+  verified_at : TIMESTAMP
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "tenant_operating_hours" as operating_hours {
+  * id : VARCHAR(36) [PK]
+  --
+  * tenant_id : VARCHAR(36) [FK -> tenants.id]
+  * day_of_week : INT (0-6)
+  * open_time : VARCHAR(5) ("09:00")
+  * close_time : VARCHAR(5) ("17:00")
+  * is_closed : BOOLEAN
+}
+
+entity "categories" as categories {
+  * id : VARCHAR(36) [PK]
+  --
+  * name : VARCHAR(100) [UNIQUE]
+  * slug : VARCHAR(100) [UNIQUE]
+  description : TEXT
+  * created_at : TIMESTAMP
+}
+
+entity "menus" as menus {
+  * id : VARCHAR(36) [PK]
+  --
+  * tenant_id : VARCHAR(36) [FK -> tenants.id]
+  * category_id : VARCHAR(36) [FK -> categories.id]
+  * name : VARCHAR(255)
+  description : TEXT
+  * price : INT
+  image_url : TEXT
+  * stock : INT
+  * preparation_time : INT
+  * status : ENUM('AVAILABLE', 'UNAVAILABLE', 'OUT_OF_STOCK')
+  deleted_at : TIMESTAMP
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "carts" as carts {
+  * id : VARCHAR(36) [PK]
+  --
+  * user_id : VARCHAR(36) [FK -> users.id, UNIQUE]
+  tenant_id : VARCHAR(36) [FK -> tenants.id]
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "cart_items" as cart_items {
+  * id : VARCHAR(36) [PK]
+  --
+  * cart_id : VARCHAR(36) [FK -> carts.id]
+  * menu_id : VARCHAR(36) [FK -> menus.id]
+  * quantity : INT
+  * price_snapshot : INT
+  notes : TEXT
+}
+
+entity "pickup_slots" as pickup_slots {
+  * id : VARCHAR(36) [PK]
+  --
+  * tenant_id : VARCHAR(36) [FK -> tenants.id]
+  * date : DATE
+  * start_at : TIMESTAMP
+  * end_at : TIMESTAMP
+  * capacity : INT
+  * current_orders : INT
+  * status : ENUM('OPEN', 'CLOSED')
+}
+
+entity "orders" as orders {
+  * id : VARCHAR(36) [PK]
+  --
+  * order_number : VARCHAR(50) [UNIQUE]
+  * user_id : VARCHAR(36) [FK -> users.id]
+  * tenant_id : VARCHAR(36) [FK -> tenants.id]
+  * pickup_slot_id : VARCHAR(36) [FK -> pickup_slots.id]
+  * subtotal : INT
+  * fee : INT
+  * total : INT
+  * status : ENUM('PENDING_PAYMENT', 'PAID', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'COMPLETED', 'CANCELLED', 'REJECTED', 'REFUNDED', 'NO_SHOW')
+  notes : TEXT
+  * pickup_code : VARCHAR(10) [UNIQUE]
+  * idempotency_key : VARCHAR(100)
+  expires_at : TIMESTAMP
+  paid_at : TIMESTAMP
+  accepted_at : TIMESTAMP
+  ready_at : TIMESTAMP
+  completed_at : TIMESTAMP
+  cancelled_at : TIMESTAMP
+  cancel_reason : TEXT
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "order_items" as order_items {
+  * id : VARCHAR(36) [PK]
+  --
+  * order_id : VARCHAR(36) [FK -> orders.id]
+  * menu_id : VARCHAR(36) [FK -> menus.id]
+  * menu_name_snapshot : VARCHAR(255)
+  * price_snapshot : INT
+  * quantity : INT
+  * subtotal : INT
+  notes : TEXT
+}
+
+entity "payments" as payments {
+  * id : VARCHAR(36) [PK]
+  --
+  * order_id : VARCHAR(36) [FK -> orders.id, UNIQUE]
+  * amount : INT
+  * method : ENUM('QRIS', 'EWALLET', 'VIRTUAL_ACCOUNT')
+  * status : ENUM('PENDING', 'PAID', 'FAILED', 'EXPIRED', 'REFUNDED')
+  payment_ref : VARCHAR(100) [UNIQUE]
+  qr_string : TEXT
+  va_number : VARCHAR(50)
+  paid_at : TIMESTAMP
+  expires_at : TIMESTAMP
+  * created_at : TIMESTAMP
+  * updated_at : TIMESTAMP
+}
+
+entity "payment_attempts" as payment_attempts {
+  * id : VARCHAR(36) [PK]
+  --
+  * payment_id : VARCHAR(36) [FK -> payments.id]
+  * amount : INT
+  * method : VARCHAR(50)
+  * status : VARCHAR(50)
+  raw_response : JSONB
+  * created_at : TIMESTAMP
+}
+
+entity "order_status_logs" as order_status_logs {
+  * id : VARCHAR(36) [PK]
+  --
+  * order_id : VARCHAR(36) [FK -> orders.id]
+  changed_by_user_id : VARCHAR(36) [FK -> users.id]
+  * from_status : VARCHAR(50)
+  * to_status : VARCHAR(50)
+  note : TEXT
+  * created_at : TIMESTAMP
+}
+
+entity "notifications" as notifications {
+  * id : VARCHAR(36) [PK]
+  --
+  * user_id : VARCHAR(36) [FK -> users.id]
+  * title : VARCHAR(255)
+  * message : TEXT
+  * type : ENUM('ORDER', 'PAYMENT', 'REVIEW', 'SYSTEM')
+  action_url : TEXT
+  is_read : BOOLEAN
+  read_at : TIMESTAMP
+  * created_at : TIMESTAMP
+}
+
+entity "reviews" as reviews {
+  * id : VARCHAR(36) [PK]
+  --
+  * order_id : VARCHAR(36) [FK -> orders.id, UNIQUE]
+  * user_id : VARCHAR(36) [FK -> users.id]
+  * tenant_id : VARCHAR(36) [FK -> tenants.id]
+  * rating : INT (1-5)
+  comment : TEXT
+  is_hidden : BOOLEAN
+  * created_at : TIMESTAMP
+}
+
+entity "system_settings" as system_settings {
+  * key : VARCHAR(100) [PK]
+  --
+  * value : TEXT
+  description : TEXT
+  * updated_at : TIMESTAMP
+}
+
+entity "order_counters" as order_counters {
+  * year : INT [PK]
+  --
+  * last_value : INT
+}
+
+' Relasi Antar Tabel (Crow's Foot Notation)
+users ||--o| tenants : "1-to-0..1 (owns)"
+venues ||--o{ tenants : "1-to-many (houses)"
+tenants ||--|{ operating_hours : "1-to-many (configures)"
+tenants ||--o{ menus : "1-to-many (offers)"
+categories ||--o{ menus : "1-to-many (groups)"
+tenants ||--o{ pickup_slots : "1-to-many (generates)"
+
+users ||--o| carts : "1-to-1 (has)"
+tenants ||--o{ carts : "1-to-many (holds)"
+carts ||--o{ cart_items : "1-to-many (contains)"
+menus ||--o{ cart_items : "1-to-many (referenced in)"
+
+users ||--o{ orders : "1-to-many (places)"
+tenants ||--o{ orders : "1-to-many (fulfills)"
+pickup_slots ||--o{ orders : "1-to-many (allocates)"
+orders ||--|{ order_items : "1-to-many (contains)"
+menus ||--o{ order_items : "1-to-many (snapshotted to)"
+
+orders ||--o| payments : "1-to-1 (billed by)"
+payments ||--o{ payment_attempts : "1-to-many (logs attempts)"
+orders ||--o{ order_status_logs : "1-to-many (audited by)"
+users ||--o{ order_status_logs : "1-to-many (changed by)"
+
+users ||--o{ notifications : "1-to-many (receives)"
+orders ||--o| reviews : "1-to-0..1 (rated by)"
+users ||--o{ reviews : "1-to-many (authors)"
+tenants ||--o{ reviews : "1-to-many (evaluated on)"
+
+@enduml

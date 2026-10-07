@@ -1,0 +1,70 @@
+@startuml ComponentDiagram
+skinparam componentStyle uml2
+skinparam roundcorner 8
+skinparam shadowing false
+
+package "Frontend Web Client (Browser)" {
+  [Customer UI Components\n(SlotPicker, Cart, QRView)] as CustomerUI
+  [Tenant Portal Components\n(KitchenSync, MenuEditor, Scanner)] as TenantUI
+  [Admin Dashboard Components\n(SDG Impact, VerificationTable)] as AdminUI
+  [Client State Contexts\n(AuthContext, CartContext)] as ClientContext
+}
+
+package "Next.js 16 Backend Application (Serverless Node.js)" {
+  package "HTTP / Route Handlers (API Gateway)" {
+    [Auth Guard Middleware\n(JWT & Role Verification)] as AuthGuard
+    [Zod Validation Layer\n(Request Schemas)] as ZodLayer
+    [API Controllers\n(/api/orders, /api/tenant/*, etc.)] as Controllers
+  }
+
+  package "Application Service Layer" {
+    [OrderService] as OrderSvc
+    [PickupSlotService] as SlotSvc
+    [CartService] as CartSvc
+    [AnalyticsService] as AnalyticsSvc
+    [PaymentService] as PaymentSvc
+    [NotificationService] as NotifSvc
+  }
+
+  package "Pure Domain Layer (Zero Framework)" {
+    [OrderStateMachine] as StateMachine
+    [SlotPolicy Engine] as SlotPolicy
+    [PricingEngine] as Pricing
+  }
+
+  package "Data Access Layer (Prisma ORM)" {
+    [Prisma Client Singleton] as PrismaClient
+    [Atomic SQL Transactions] as AtomicTx
+  }
+}
+
+cloud "External Services & Storage" {
+  database "Neon PostgreSQL\n(AWS Singapore ap-southeast-1)" as NeonDB
+  [Mock Payment Provider\n(QRIS, VA, E-Wallet Simulator)] as PaymentGateway
+}
+
+' Inter-component dependencies
+CustomerUI ..> ClientContext : reads state
+TenantUI ..> ClientContext : reads state
+AdminUI ..> ClientContext : reads state
+
+ClientContext --> AuthGuard : HTTP / JSON
+Controllers --> ZodLayer : validates body
+ZodLayer --> OrderSvc : calls
+ZodLayer --> SlotSvc : calls
+ZodLayer --> AnalyticsSvc : calls
+ZodLayer --> CartSvc : calls
+
+OrderSvc --> StateMachine : evaluates transition
+OrderSvc --> SlotPolicy : checks lead time
+OrderSvc --> Pricing : calculates subtotal & fee
+OrderSvc --> PaymentSvc : delegates charge
+OrderSvc --> NotifSvc : triggers alert
+
+OrderSvc --> AtomicTx : executes within
+SlotSvc --> AtomicTx : executes within
+AtomicTx --> PrismaClient : uses
+PrismaClient --> NeonDB : TCP / TLS Pooled Connection
+PaymentSvc --> PaymentGateway : calls mock charge
+
+@enduml
