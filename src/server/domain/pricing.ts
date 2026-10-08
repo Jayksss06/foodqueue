@@ -1,3 +1,5 @@
+import { formatRupiah } from '@/lib/utils';
+
 export interface PricingItemInput {
   menuId: string;
   name: string;
@@ -94,11 +96,6 @@ export class Pricing {
    * Format angka integer rupiah menjadi format tampilan standar Indonesia, contoh: "Rp 25.000"
    */
   public static formatRupiah(amount: number): string {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    return formatRupiah(amount);
   }
 }

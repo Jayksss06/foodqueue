@@ -268,7 +268,7 @@ export class OrderService {
       });
 
       // Lepaskan stok dan kapasitas slot jika order dibatalkan atau ditolak (BR-11)
-      if (OrderStateMachine.releasesReservation(targetStatus)) {
+      if (OrderStateMachine.releasesReservation(order.status as OrderStatus, targetStatus)) {
         for (const item of order.items) {
           await tx.$executeRaw`
             UPDATE "menus"

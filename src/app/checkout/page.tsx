@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { SlotPicker } from '@/components/ui/SlotPicker';
 import { useCart } from '@/context/CartContext';
 import { SlotAvailability } from '@/types';
-import { formatRupiah } from '@/lib/utils';
+import { formatRupiah, generateUUID } from '@/lib/utils';
 import { ArrowLeft, Clock, AlertCircle } from 'lucide-react';
 
 export default function CheckoutPage() {
@@ -25,13 +25,8 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Generate 1 UUID idempotency key per checkout page session
-  const idempotencyKey = useMemo(() => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  }, []);
+  // Generate 1 valid RFC4122 UUID v4 per checkout session
+  const [idempotencyKey] = useState<string>(() => generateUUID());
 
   // Inisialisasi daftar tanggal (Hari ini, Besok, H+2)
   useEffect(() => {

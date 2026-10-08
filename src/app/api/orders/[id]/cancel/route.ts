@@ -1,16 +1,13 @@
 import { NextRequest } from 'next/server';
-import { withAuth, AuthContext } from '@/server/http/auth-guard';
+import { withAuth, AuthContext, getRouteParam } from '@/server/http/auth-guard';
 import { OrderService } from '@/server/services/order.service';
 import { apiSuccess } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
 
 export const POST = withAuth(
-  async (req: NextRequest, ctx: AuthContext) => {
+  async (req: NextRequest, ctx: AuthContext, routeContext: unknown) => {
     try {
-      const url = new URL(req.url);
-      const segments = url.pathname.split('/');
-      // /api/orders/[id]/cancel -> segments: ['', 'api', 'orders', '[id]', 'cancel']
-      const id = segments[segments.length - 2];
+      const id = await getRouteParam(routeContext, 'id', req);
 
       let reason = 'Dibatalkan oleh pengguna.';
       try {

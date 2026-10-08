@@ -9,18 +9,20 @@ export class AnalyticsService {
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
-    // Ambil semua order tenant pada hari ini
+    // Ambil semua order tenant untuk operasional hari ini (berdasarkan slot pengambilan hari ini, termasuk pre-order H-1/H-2)
     const orders = await prisma.order.findMany({
       where: {
         tenantId,
-        createdAt: { gte: startOfDay, lte: endOfDay },
+        pickupSlot: {
+          startAt: { gte: startOfDay, lte: endOfDay },
+        },
       },
       include: {
         items: true,
         pickupSlot: true,
         user: { select: { id: true, name: true, phone: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { pickupSlot: { startAt: 'asc' } },
     });
 
     const totalOrders = orders.length;

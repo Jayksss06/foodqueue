@@ -162,7 +162,7 @@ export default function OrderDetailPage({ params }: OrderDetailProps) {
   const isPendingPayment = order.status === 'PENDING_PAYMENT';
   const isReady = order.status === 'READY_FOR_PICKUP';
   const isCompleted = order.status === 'COMPLETED';
-  const canCancel = ['PENDING_PAYMENT', 'PAID', 'ACCEPTED'].includes(order.status);
+  const canCancel = ['PENDING_PAYMENT', 'PAID'].includes(order.status);
   const slotDateStr = order.pickupSlot?.slotDate 
     ? new Date(order.pickupSlot.slotDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
     : '-';

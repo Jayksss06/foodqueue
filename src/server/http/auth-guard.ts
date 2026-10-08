@@ -63,12 +63,13 @@ export async function getAuthenticatedUser(req?: NextRequest): Promise<UserSessi
 
 /**
  * Higher-order wrapper for Route Handlers enforcing authentication and role permissions.
+ * Passes routeContext (with params) as 3rd parameter to handler.
  */
-export function withAuth(
-  handler: (req: NextRequest, ctx: AuthContext) => Promise<Response>,
+export function withAuth<T = unknown>(
+  handler: (req: NextRequest, ctx: AuthContext, routeContext?: T) => Promise<Response>,
   options?: AuthOptions
 ) {
-  return async (req: NextRequest): Promise<Response> => {
+  return async (req: NextRequest, routeContext?: T): Promise<Response> => {
     const user = await getAuthenticatedUser(req);
 
     if (!user) {
@@ -79,6 +80,35 @@ export function withAuth(
       return apiForbidden('Anda tidak memiliki izin untuk mengakses resource ini.');
     }
 
-    return handler(req, { user });
+    return handler(req, { user }, routeContext);
   };
+}
+
+/**
+ * Helper to safely extract dynamic route parameters regardless of Next.js sync/async params
+ */
+export async function getRouteParam(
+  routeContext: unknown,
+  paramName: string,
+  req?: NextRequest
+): Promise<string> {
+  const ctx = routeContext as { params?: Record<string, string> | Promise<Record<string, string>> } | undefined;
+  if (ctx?.params) {
+    const resolved = await Promise.resolve(ctx.params);
+    if (resolved && resolved[paramName]) {
+      return String(resolved[paramName]);
+    }
+  }
+  if (req) {
+    const cleanPath = (req.nextUrl?.pathname || new URL(req.url).pathname).replace(/\/+$/, '');
+    const parts = cleanPath.split('/').filter(Boolean);
+    const resourceIdx = parts.findIndex((p) =>
+      ['orders', 'tenants', 'menus', 'users', 'payments', 'items', 'notifications'].includes(p)
+    );
+    if (resourceIdx !== -1 && parts[resourceIdx + 1]) {
+      return parts[resourceIdx + 1];
+    }
+    return parts[parts.length - 1] || '';
+  }
+  return '';
 }

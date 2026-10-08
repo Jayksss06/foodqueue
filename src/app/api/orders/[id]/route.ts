@@ -1,16 +1,14 @@
 import { NextRequest } from 'next/server';
-import { withAuth, AuthContext } from '@/server/http/auth-guard';
+import { withAuth, AuthContext, getRouteParam } from '@/server/http/auth-guard';
 import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiNotFound, apiForbidden } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
 import QRCode from 'qrcode';
 
 export const GET = withAuth(
-  async (req: NextRequest, ctx: AuthContext) => {
+  async (req: NextRequest, ctx: AuthContext, routeContext: unknown) => {
     try {
-      const url = new URL(req.url);
-      const segments = url.pathname.split('/');
-      const id = segments[segments.length - 1];
+      const id = await getRouteParam(routeContext, 'id', req);
 
       const order = await prisma.order.findUnique({
         where: { id },

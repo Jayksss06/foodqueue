@@ -126,13 +126,31 @@ export class OrderStateMachine {
 
   /**
    * Apakah transisi ke status ini menandakan reservasi slot dan stok harus dilepaskan?
+   * Mencegah pelepasan ganda jika status asal sudah pernah melepaskan reservasi (misal CANCELLED -> REFUNDED).
    */
-  public static releasesReservation(targetStatus: OrderStatus): boolean {
-    return (
+  public static releasesReservation(
+    fromOrTargetStatus: OrderStatus,
+    targetStatus?: OrderStatus
+  ): boolean {
+    if (targetStatus === undefined) {
+      return (
+        fromOrTargetStatus === 'CANCELLED' ||
+        fromOrTargetStatus === 'REJECTED' ||
+        fromOrTargetStatus === 'REFUNDED'
+      );
+    }
+
+    const fromStatus = fromOrTargetStatus;
+    const isTargetRelease =
       targetStatus === 'CANCELLED' ||
       targetStatus === 'REJECTED' ||
-      targetStatus === 'REFUNDED'
-    );
+      targetStatus === 'REFUNDED';
+    const wasAlreadyReleased =
+      fromStatus === 'CANCELLED' ||
+      fromStatus === 'REJECTED' ||
+      fromStatus === 'REFUNDED';
+
+    return isTargetRelease && !wasAlreadyReleased;
   }
 
   /**

@@ -32,27 +32,33 @@ export class PickupSlotService {
       tenant.slotDurationMinutes
     );
 
-    // Lakukan upsert agar slot yang sudah ada (mungkin sudah ada order atau custom capacity) tidak tertimpa
-    for (const def of slotDefs) {
-      await prisma.pickupSlot.upsert({
-        where: {
-          tenantId_startAt: {
-            tenantId,
-            startAt: def.startAt,
-          },
-        },
-        create: {
-          tenantId,
-          date: targetDate,
-          startAt: def.startAt,
-          endAt: def.endAt,
-          capacity: tenant.maxOrdersPerSlot,
-          currentOrders: 0,
-          status: 'OPEN',
-        },
-        update: {}, // Jangan timpa jika sudah ada
-      });
+    if (slotDefs.length === 0) return;
+
+    // Cek apakah slot sudah pernah di-generate sebelumnya untuk tanggal ini
+    const existingCount = await prisma.pickupSlot.count({
+      where: {
+        tenantId,
+        date: targetDate,
+      },
+    });
+
+    if (existingCount > 0) {
+      return; // Slot sudah ada, hindari query berulang
     }
+
+    // Lakukan bulk insert dalam 1 batch query SQL
+    await prisma.pickupSlot.createMany({
+      data: slotDefs.map((def) => ({
+        tenantId,
+        date: targetDate,
+        startAt: def.startAt,
+        endAt: def.endAt,
+        capacity: tenant.maxOrdersPerSlot,
+        currentOrders: 0,
+        status: 'OPEN',
+      })),
+      skipDuplicates: true,
+    });
   }
 
   /**

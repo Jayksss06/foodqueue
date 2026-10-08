@@ -54,6 +54,14 @@ describe('OrderStateMachine Domain Unit Tests', () => {
     expect(OrderStateMachine.releasesReservation('REFUNDED')).toBe(true);
     expect(OrderStateMachine.releasesReservation('ACCEPTED')).toBe(false);
     expect(OrderStateMachine.releasesReservation('COMPLETED')).toBe(false);
+
+    // Two-parameter tests (anti double-release)
+    expect(OrderStateMachine.releasesReservation('PAID', 'CANCELLED')).toBe(true);
+    expect(OrderStateMachine.releasesReservation('PAID', 'REJECTED')).toBe(true);
+    expect(OrderStateMachine.releasesReservation('PENDING_PAYMENT', 'CANCELLED')).toBe(true);
+    // Already released when entering CANCELLED/REJECTED, so REFUNDED must NOT release again
+    expect(OrderStateMachine.releasesReservation('CANCELLED', 'REFUNDED')).toBe(false);
+    expect(OrderStateMachine.releasesReservation('REJECTED', 'REFUNDED')).toBe(false);
   });
 
   it('should correctly flag required refund when rejected or cancelled after paid', () => {
