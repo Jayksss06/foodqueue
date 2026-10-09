@@ -68,10 +68,6 @@ export default async function CustomerHomePage() {
     console.error('Home page DB fetch error:', err);
   }
 
-  const formatSlotTime = (start: Date, end: Date) => {
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${pad(start.getHours())}:${pad(start.getMinutes())}–${pad(end.getHours())}:${pad(end.getMinutes())}`;
-  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>

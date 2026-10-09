@@ -56,7 +56,7 @@ Database dirancang dengan **18 model tabel relasional** ternormalisasi (3NF) di 
 | `carts` | Keranjang belanja per pelanggan | `userId (unique)` |
 | `cart_items` | Rincian menu dalam keranjang | `[cartId, menuId] (composite unique)` |
 | `pickup_slots` | Jendela waktu pengambilan 15 menit | `[tenantId, startAt] (composite unique)`, `[tenantId, date]` |
-| `orders` | Header transaksi pre-order & scheduled pickup | `orderNumber (unique)`, `pickupCode (unique)`, `[userId, idempotencyKey]` |
+| `orders` | Header transaksi pre-order & scheduled pickup | `orderNumber (unique)`, `pickupCode (unique)`, `guestToken (unique)`, `idempotencyKey (unique)` |
 | `order_items` | Snapshot menu, harga historis, dan jumlah porsi | `[orderId, menuId]` |
 | `payments` | Header pembayaran (QRIS, VA, E-Wallet) | `orderId (unique)`, `paymentRef (unique)` |
 | `payment_attempts` | Jejak audit riwayat percobaan pembayaran | `[paymentId, createdAt]` |
@@ -112,7 +112,7 @@ if (updatedMenu.count === 0) {
 ```
 
 ### 3.3 Idempotency Key
-Setiap permintaan checkout membawa `idempotencyKey` yang disimpan di tabel `orders` dengan constraint unik `[userId, idempotencyKey]`. Jika terjadi jaringan tidak stabil dan pengguna menekan tombol checkout berkali-kali, pesanan ganda dicegah pada level basis data.
+Setiap permintaan checkout membawa `idempotencyKey` acak (RFC 4122 UUID v4) yang disimpan di tabel `orders` dengan constraint unik global `idempotencyKey (unique)`. Jika terjadi koneksi jaringan tidak stabil dan pengguna menekan tombol checkout berkali-kali, pesanan ganda dicegah pada level basis data.
 
 ---
 
@@ -125,6 +125,15 @@ Setiap permintaan checkout membawa `idempotencyKey` yang disimpan di tabel `orde
    - Dilengkapi atribut `sessionVersion`. Saat pengguna keluar atau admin melakukan *suspend*, kolom `sessionVersion` pada tabel `users` di-increment, sehingga seluruh token lama yang beredar langsung tidak valid.
 3. **Pencegahan Insecure Direct Object References (IDOR)**:
    - Endpoint portal merchant (`/api/tenant/*`) mengekstrak `tenantId` langsung dari JWT sesi terotentikasi, bukan dari URL query parameter yang dapat dimanipulasi klien.
-   - Endpoint pesanan memverifikasi bahwa customer hanya dapat melihat pesanannya sendiri (`order.userId === ctx.user.id`).
+   - **Otorisasi Tamu (Guest Secret Token)**: Pesanan tamu dilindungi oleh `guestToken` (UUID v4) kriptografis. Endpoint pelacakan (`/orders/[id]?token=...`) dan pembayaran hanya mengizinkan akses jika token di URL cocok persis dengan `order.guestToken`, mencegah pembobolan melalui tebakan ID pesanan.
 4. **Validasi Input Ketat**:
    - Seluruh payload request divalidasi menggunakan skema **Zod** sebelum mencapai layer service.
+
+---
+
+## 5. Arsitektur Pemesanan Langsung Tanpa Login (Direct Guest Checkout)
+
+Dalam rancangan sistem terkini, sistem login bagi pembeli **ditiadakan 100%** untuk memaksimalkan efisiensi waktu istirahat mahasiswa:
+1. **Client-Side Cart Engine**: Keranjang belanja berjalan di browser melalui `localStorage` (`foodqueue_guest_cart`) dengan validasi otomatis aturan bisnis BR-05 (satu pesanan hanya boleh berasal dari satu tenant).
+2. **Seamless Biodata Capture**: Pembeli hanya perlu memasukkan Nama Lengkap dan Nomor WhatsApp saat checkout. Data tersimpan di browser (`foodqueue_guest_info`) untuk digunakan kembali secara otomatis pada pesanan berikutnya.
+3. **Portal Pengelola Terisolasi**: Halaman login (`/login`) didedikasikan secara eksklusif bagi pemilik stan (Tenant) dan Administrator untuk mengelola operasional kantin.

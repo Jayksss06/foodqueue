@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
           icon={Store}
         />
         <KpiCard
-          title="Total Akun Terdaftar"
+          title="Total Pelanggan Terlayani"
           value={kpi.totalUsers ?? 0}
           icon={Users}
         />

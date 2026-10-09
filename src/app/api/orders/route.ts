@@ -32,9 +32,7 @@ export const GET = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthCo
 
     const where: any = {};
 
-    if (ctx.user) {
-      where.userId = ctx.user.id;
-    } else if (guestOrderIds) {
+    if (guestOrderIds) {
       const idsList = guestOrderIds.split(',').map((s) => s.trim()).filter(Boolean);
       if (idsList.length === 0) {
         return apiSuccess([], { page: 1, pageSize, total: 0, totalPages: 0 });
@@ -45,6 +43,8 @@ export const GET = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthCo
         const tokenList = guestTokens.split(',').map((s) => s.trim()).filter(Boolean);
         where.guestToken = { in: tokenList };
       }
+    } else if (ctx.user) {
+      where.userId = ctx.user.id;
     } else {
       return apiSuccess([], { page: 1, pageSize, total: 0, totalPages: 0 });
     }

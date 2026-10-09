@@ -44,10 +44,13 @@ export default function AdminOrdersPage() {
   const filteredOrders = orders.filter((o) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
+    const customerName = (o.isGuest ? o.guestName : o.user?.name) || '';
+    const customerPhone = (o.isGuest ? o.guestPhone : o.user?.phone) || '';
     return (
       o.orderNumber.toLowerCase().includes(q) ||
       (o.tenant?.name && o.tenant.name.toLowerCase().includes(q)) ||
-      (o.user?.name && o.user.name.toLowerCase().includes(q)) ||
+      customerName.toLowerCase().includes(q) ||
+      customerPhone.toLowerCase().includes(q) ||
       o.pickupCode.toLowerCase().includes(q)
     );
   });
@@ -182,8 +185,18 @@ export default function AdminOrdersPage() {
                         {ord.tenant?.name || '-'}
                       </td>
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <div>{ord.user?.name || '-'}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{ord.user?.email || '-'}</div>
+                        <div style={{ fontWeight: 650 }}>
+                          {ord.isGuest ? ord.guestName || 'Pelanggan Tamu' : ord.user?.name || '-'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                          {ord.isGuest ? (
+                            <span style={{ color: 'var(--color-forest)', fontWeight: 600 }}>
+                              Tamu · {ord.guestPhone || '-'}
+                            </span>
+                          ) : (
+                            ord.user?.email || '-'
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <span style={{

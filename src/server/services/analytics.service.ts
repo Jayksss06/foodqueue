@@ -121,7 +121,8 @@ export class AnalyticsService {
    */
   public static async getAdminDashboard() {
     const [
-      totalUsers,
+      distinctGuestCustomers,
+      registeredCustomers,
       totalTenants,
       activeTenants,
       totalOrders,
@@ -130,6 +131,11 @@ export class AnalyticsService {
       ordersByStatus,
       topTenants,
     ] = await Promise.all([
+      prisma.order.findMany({
+        where: { isGuest: true, guestPhone: { not: null } },
+        distinct: ['guestPhone'],
+        select: { guestPhone: true },
+      }),
       prisma.user.count({ where: { role: 'CUSTOMER' } }),
       prisma.tenant.count(),
       prisma.tenant.count({ where: { status: 'ACTIVE' } }),
@@ -147,6 +153,8 @@ export class AnalyticsService {
         orderBy: { ratingAvg: 'desc' },
       }),
     ]);
+
+    const totalUsers = distinctGuestCustomers.length + registeredCustomers;
 
     const revenueResult = await prisma.order.aggregate({
       where: { status: 'COMPLETED' },

@@ -16,9 +16,6 @@ import {
   ArrowLeft,
   Clock,
   AlertCircle,
-  User,
-  Phone,
-  CheckCircle2,
   Sparkles,
   Info,
 } from 'lucide-react';
@@ -49,17 +46,18 @@ export default function CheckoutPage() {
 
   // Load saved guest info from previous order if available
   useEffect(() => {
-    if (!user) {
-      try {
-        const saved = localStorage.getItem(GUEST_INFO_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.name) setGuestName(parsed.name);
-          if (parsed.phone) setGuestPhone(parsed.phone);
-        }
-      } catch (e) {
-        console.error(e);
+    try {
+      const saved = localStorage.getItem(GUEST_INFO_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name) setGuestName(parsed.name);
+        if (parsed.phone) setGuestPhone(parsed.phone);
+      } else if (user) {
+        if (user.name) setGuestName(user.name);
+        if (user.phoneNumber || user.phone) setGuestPhone(user.phoneNumber || user.phone || '');
       }
+    } catch (e) {
+      console.error(e);
     }
   }, [user]);
 
