@@ -47,6 +47,9 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = '500px' }: 
         style={{
           width: '100%',
           maxWidth,
+          maxHeight: 'calc(100dvh - 2rem)',
+          display: 'flex',
+          flexDirection: 'column',
           backgroundColor: 'var(--color-surface)',
           borderRadius: 'var(--radius-xl)',
           boxShadow: 'var(--shadow-xl)',
@@ -61,8 +64,9 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = '500px' }: 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '1.25rem 1.5rem',
+            padding: '1.15rem 1.25rem',
             borderBottom: '1px solid var(--color-border-subtle)',
+            flexShrink: 0,
           }}
         >
           {title ? (
@@ -85,7 +89,16 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = '500px' }: 
           </button>
         </div>
 
-        <div style={{ padding: '1.5rem' }}>{children}</div>
+        <div
+          style={{
+            padding: '1.25rem',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            flex: 1,
+          }}
+        >
+          {children}
+        </div>
       </div>
 
       <style jsx>{`

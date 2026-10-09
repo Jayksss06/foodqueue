@@ -530,7 +530,7 @@ export default function CheckoutPage() {
           right: 0,
           backgroundColor: 'var(--color-surface)',
           borderTop: '1px solid var(--color-border)',
-          padding: '1rem',
+          padding: '0.85rem 1rem calc(env(safe-area-inset-bottom, 0px) + 0.85rem) 1rem',
           zIndex: 40,
           boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.06)',
         }}
@@ -542,14 +542,17 @@ export default function CheckoutPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1rem',
+            gap: '0.85rem',
           }}
         >
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
-                fontSize: '0.85rem',
+                fontSize: '0.8rem',
                 color: 'var(--color-ink-500)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {cart.tenantName} · {cart.itemCount} item
@@ -557,8 +560,8 @@ export default function CheckoutPage() {
             <div
               className="tabular-nums"
               style={{
-                fontSize: '1.25rem',
-                fontWeight: 800,
+                fontSize: 'clamp(1.1rem, 4vw, 1.3rem)',
+                fontWeight: 850,
                 color: 'var(--color-primary-600)',
               }}
             >
@@ -571,9 +574,9 @@ export default function CheckoutPage() {
             disabled={!selectedSlot}
             loading={submitting}
             onClick={handleCheckoutSubmit}
-            style={{ minWidth: '180px' }}
+            style={{ minWidth: '150px', flexShrink: 0 }}
           >
-            Lanjut ke Pembayaran
+            Lanjut Bayar
           </Button>
         </div>
       </div>

@@ -14,23 +14,24 @@ export function BottomNav() {
   }
 
   const items = [
-    { label: 'Home', href: '/home', icon: Home },
-    { label: 'Cari', href: '/tenants', icon: Search },
+    { label: 'Beranda', href: '/home', icon: Home },
+    { label: 'Cari Stan', href: '/tenants', icon: Search },
     { label: 'Pesanan', href: '/orders', icon: ClipboardList },
     { label: 'Profil', href: '/profile', icon: User },
   ];
 
   return (
-    <div
+    <nav
+      aria-label="Navigasi Bawah Seluler"
       className="mobile-bottom-nav glass-nav"
       style={{
         position: 'fixed',
-        bottom: '1rem',
-        left: '1rem',
-        right: '1rem',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)',
+        left: '0.85rem',
+        right: '0.85rem',
         maxWidth: '480px',
         margin: '0 auto',
-        height: '60px',
+        height: '62px',
         borderRadius: 'var(--radius-full)',
         zIndex: 40,
         display: 'flex',
@@ -59,7 +60,7 @@ export function BottomNav() {
               fontSize: '0.72rem',
               fontWeight: isActive ? 700 : 500,
               gap: '2px',
-              padding: '0.4rem 0.75rem',
+              padding: '0.35rem 0.65rem',
               borderRadius: 'var(--radius-full)',
               transition: 'all var(--transition-fast)',
             }}
@@ -77,6 +78,6 @@ export function BottomNav() {
           }
         }
       `}</style>
-    </div>
+    </nav>
   );
 }

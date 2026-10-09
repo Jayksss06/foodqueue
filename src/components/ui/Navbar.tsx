@@ -212,6 +212,9 @@ export function Navbar() {
           .user-name-label {
             display: none;
           }
+          .tenant-login-label {
+            display: none;
+          }
         }
       `}</style>
     </header>
