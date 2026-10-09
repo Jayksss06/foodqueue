@@ -1,51 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { UtensilsCrossed } from 'lucide-react';
+import { UtensilsCrossed, Sparkles, Store, ArrowRight, ShieldCheck } from 'lucide-react';
 
-export default function RegisterCustomerPage() {
-  const { refreshUser } = useAuth();
-  const router = useRouter();
-
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error?.message || 'Registrasi gagal.');
-      }
-
-      await refreshUser();
-      router.push('/home');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function RegisterInfoPage() {
   return (
     <div
       style={{
@@ -57,7 +18,8 @@ export default function RegisterCustomerPage() {
         backgroundColor: 'var(--color-bg)',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '440px' }}>
+      <div style={{ width: '100%', maxWidth: '480px' }}>
+        {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             <div
@@ -70,6 +32,7 @@ export default function RegisterCustomerPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#FFFFFF',
+                boxShadow: '0 4px 12px rgba(240, 89, 42, 0.3)',
               }}
             >
               <UtensilsCrossed size={22} />
@@ -78,70 +41,45 @@ export default function RegisterCustomerPage() {
               Food<span style={{ color: 'var(--color-primary-500)' }}>Queue</span>
             </span>
           </Link>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '0.75rem' }}>
-            Daftar Akun Pelanggan
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.75rem', color: 'var(--color-ink-900)' }}>
+            Pesan Makanan 100% Bebas Registrasi!
           </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-ink-500)' }}>
-            Untuk mahasiswa, dosen, staf, dan pengunjung kantin
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-ink-500)', marginTop: '0.25rem' }}>
+            Sistem FoodQueue kini dirancang tanpa perlu membuat akun atau login bagi pembeli
           </p>
         </div>
 
         <Card padding="lg">
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {error && (
-              <div
-                style={{
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--color-danger-bg)',
-                  color: 'var(--color-danger-text)',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                }}
-              >
-                {error}
-              </div>
-            )}
+          <div
+            style={{
+              padding: '1rem',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--color-primary-50)',
+              border: '1px solid var(--color-primary-200)',
+              marginBottom: '1.5rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 750, color: 'var(--color-primary-700)', fontSize: '0.9rem', marginBottom: '0.35rem' }}>
+              <Sparkles size={16} /> Kenapa Tanpa Login?
+            </div>
+            <p style={{ fontSize: '0.825rem', color: 'var(--color-ink-700)', lineHeight: 1.5 }}>
+              Agar mahasiswa dan pengunjung kantin tidak membuang waktu registrasi atau mengingat password saat jam istirahat yang singkat. Cukup pilih makanan, pilih jam ambil, lalu isi nama & nomor WhatsApp saat checkout.
+            </p>
+          </div>
 
-            <Input
-              label="Nama Lengkap"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Rina Kartika"
-              required
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <Link href="/home" style={{ textDecoration: 'none' }}>
+              <Button size="lg" style={{ width: '100%' }} icon={<ArrowRight size={18} />}>
+                Mulai Pesan Makanan Sekarang
+              </Button>
+            </Link>
 
-            <Input
-              label="Alamat Email Kampus / Pribadi"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nama@email.com"
-              required
-            />
-
-            <Input
-              label="Nomor WhatsApp / HP"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="08123456789"
-              helperText="Digunakan untuk konfirmasi pesanan"
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimal 6 karakter"
-              required
-            />
-
-            <Button type="submit" size="lg" loading={loading} style={{ width: '100%', marginTop: '0.5rem' }}>
-              Daftar Sekarang
-            </Button>
-          </form>
+            <Link href="/register/tenant" style={{ textDecoration: 'none' }}>
+              <Button variant="outline" size="lg" style={{ width: '100%' }} icon={<Store size={18} />}>
+                Daftarkan Stan / Tenant Kantin
+              </Button>
+            </Link>
+          </div>
 
           <div
             style={{
@@ -153,9 +91,9 @@ export default function RegisterCustomerPage() {
               color: 'var(--color-ink-500)',
             }}
           >
-            Sudah punya akun?{' '}
+            Pengelola stan atau administrator kantin?{' '}
             <Link href="/login" style={{ color: 'var(--color-primary-600)', fontWeight: 700 }}>
-              Masuk di sini
+              Masuk ke Portal Pengelola
             </Link>
           </div>
         </Card>

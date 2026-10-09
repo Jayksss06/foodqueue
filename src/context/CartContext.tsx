@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { CartView, CartItemView } from '@/types';
-import { useAuth } from './AuthContext';
 import { Pricing } from '@/server/domain/pricing';
 
 const GUEST_CART_STORAGE_KEY = 'foodqueue_guest_cart';
@@ -43,12 +42,11 @@ const CartContext = createContext<CartContextType>({
 });
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
   const [cart, setCart] = useState<CartView | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Helper untuk membaca keranjang guest dari localStorage
-  const loadGuestCartFromStorage = (): CartView | null => {
+  // Helper untuk membaca keranjang dari localStorage
+  const loadCartFromStorage = (): CartView | null => {
     if (typeof window === 'undefined') return null;
     try {
       const saved = localStorage.getItem(GUEST_CART_STORAGE_KEY);
@@ -61,7 +59,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const saveGuestCartToStorage = (cartData: CartView | null) => {
+  const saveCartToStorage = (cartData: CartView | null) => {
     if (typeof window === 'undefined') return;
     try {
       if (!cartData || cartData.items.length === 0) {
@@ -70,30 +68,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(cartData));
       }
     } catch (err) {
-      console.error('Failed to save guest cart to storage:', err);
+      console.error('Failed to save cart to storage:', err);
     }
   };
 
   const refreshCart = useCallback(async () => {
-    if (user && user.role === 'CUSTOMER') {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/cart');
-        if (res.ok) {
-          const json = await res.json();
-          setCart(json.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch user cart:', err);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // Mode Tamu (Guest Checkout)
-      const guestCart = loadGuestCartFromStorage();
-      setCart(guestCart);
-    }
-  }, [user]);
+    const loaded = loadCartFromStorage();
+    setCart(loaded);
+  }, []);
 
   useEffect(() => {
     refreshCart();
@@ -106,35 +88,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     replaceCart = false,
     menuDetails?: AddItemMenuDetails
   ) => {
-    // 1. Jika User Login sebagai Customer, simpan ke database cart
-    if (user && user.role === 'CUSTOMER') {
-      try {
-        const res = await fetch('/api/cart/items', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ menuId, quantity, notes, replaceCart }),
-        });
+    let currentCart = cart || loadCartFromStorage();
 
-        const json = await res.json();
-
-        if (!res.ok) {
-          if (json.error?.code === 'CART_TENANT_CONFLICT') {
-            return { success: false, conflict: true, message: json.error.message };
-          }
-          return { success: false, message: json.error?.message || 'Gagal menambahkan item.' };
-        }
-
-        setCart(json.data);
-        return { success: true };
-      } catch {
-        return { success: false, message: 'Koneksi bermasalah.' };
-      }
-    }
-
-    // 2. Jika Belum Login (Guest Checkout Mode)
-    let currentCart = cart || loadGuestCartFromStorage();
-
-    // Deteksi konflik tenant (BR-05)
+    // Deteksi konflik tenant (BR-05: 1 pesanan hanya boleh 1 tenant)
     if (
       currentCart &&
       currentCart.tenantId &&
@@ -148,41 +104,39 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           message: `Keranjang Anda berisi menu dari ${currentCart.tenantName || 'stan lain'}. Ingin mengganti keranjang dengan stan ini?`,
         };
       }
-      // Jika disetujui replaceCart, reset item lama
       currentCart = null;
     }
 
-    const items: CartItemView[] = currentCart ? [...currentCart.items] : [];
-    const existingIndex = items.findIndex((i) => i.menuId === menuId);
+    const tenantId = menuDetails?.tenantId || currentCart?.tenantId || '';
+    const tenantName = menuDetails?.tenantName || currentCart?.tenantName || 'Stan Makanan';
+    let items: CartItemView[] = currentCart ? [...currentCart.items] : [];
 
-    const price = menuDetails?.price ?? 0;
-    const name = menuDetails?.name ?? 'Menu';
-    const imageUrl = menuDetails?.imageUrl ?? null;
-    const stock = menuDetails?.stock ?? 99;
-
-    if (existingIndex >= 0) {
-      const existing = items[existingIndex];
-      const newQty = existing.quantity + quantity;
-      items[existingIndex] = {
-        ...existing,
+    const existingIdx = items.findIndex((i) => i.menuId === menuId);
+    if (existingIdx >= 0 && items[existingIdx]) {
+      const ex = items[existingIdx];
+      const newQty = ex.quantity + quantity;
+      items[existingIdx] = {
+        ...ex,
         quantity: newQty,
-        notes: notes !== undefined ? notes : existing.notes,
-        subtotal: existing.price * newQty,
+        notes: notes || ex.notes,
+        subtotal: ex.price * newQty,
       };
     } else {
+      const newItemPrice = menuDetails?.price || 0;
+      const newItemName = menuDetails?.name || 'Menu';
       items.push({
-        id: `guest_item_${menuId}_${Date.now()}`,
+        id: `guest_item_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         menuId,
-        name,
-        price,
-        imageUrl,
+        name: newItemName,
+        price: newItemPrice,
         quantity,
+        subtotal: newItemPrice * quantity,
         notes: notes || null,
-        stock,
+        imageUrl: menuDetails?.imageUrl || null,
+        stock: menuDetails?.stock ?? 99,
         isAvailable: true,
         priceChanged: false,
-        currentPrice: price,
-        subtotal: price * quantity,
+        currentPrice: newItemPrice,
       });
     }
 
@@ -191,9 +145,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
 
     const updatedCart: CartView = {
-      id: 'guest_cart',
-      tenantId: menuDetails?.tenantId ?? currentCart?.tenantId ?? null,
-      tenantName: menuDetails?.tenantName ?? currentCart?.tenantName ?? null,
+      id: currentCart?.id || 'guest_cart',
+      tenantId,
+      tenantName,
       items,
       subtotal: pricing.subtotal,
       fee: pricing.fee,
@@ -203,30 +157,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       hasPriceChanges: false,
     };
 
-    saveGuestCartToStorage(updatedCart);
+    saveCartToStorage(updatedCart);
     setCart(updatedCart);
     return { success: true };
   };
 
   const updateItem = async (itemId: string, quantity: number, notes?: string) => {
-    if (user && user.role === 'CUSTOMER') {
-      try {
-        const res = await fetch(`/api/cart/items/${itemId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ quantity, notes }),
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setCart(json.data);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-      return;
-    }
-
-    // Guest mode
     if (!cart) return;
     const items = cart.items
       .map((item) => {
@@ -243,7 +179,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       .filter((item) => item.quantity > 0);
 
     if (items.length === 0) {
-      saveGuestCartToStorage(null);
+      saveCartToStorage(null);
       setCart(null);
       return;
     }
@@ -261,30 +197,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       itemCount: pricing.itemCount,
     };
 
-    saveGuestCartToStorage(updatedCart);
+    saveCartToStorage(updatedCart);
     setCart(updatedCart);
   };
 
   const removeItem = async (itemId: string) => {
-    if (user && user.role === 'CUSTOMER') {
-      try {
-        const res = await fetch(`/api/cart/items/${itemId}`, { method: 'DELETE' });
-        if (res.ok) {
-          const json = await res.json();
-          setCart(json.data);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-      return;
-    }
-
-    // Guest mode
     if (!cart) return;
     const items = cart.items.filter((item) => item.id !== itemId && item.menuId !== itemId);
 
     if (items.length === 0) {
-      saveGuestCartToStorage(null);
+      saveCartToStorage(null);
       setCart(null);
       return;
     }
@@ -302,22 +224,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       itemCount: pricing.itemCount,
     };
 
-    saveGuestCartToStorage(updatedCart);
+    saveCartToStorage(updatedCart);
     setCart(updatedCart);
   };
 
   const clearCart = async () => {
-    if (user && user.role === 'CUSTOMER') {
-      try {
-        await fetch('/api/cart', { method: 'DELETE' });
-        await refreshCart();
-      } catch (err) {
-        console.error(err);
-      }
-      return;
-    }
-
-    saveGuestCartToStorage(null);
+    saveCartToStorage(null);
     setCart(null);
   };
 

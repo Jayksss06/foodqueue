@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { ShoppingBag, Bell, UtensilsCrossed, ShieldCheck, LogIn, User as UserIcon } from 'lucide-react';
+import { ShoppingBag, Bell, UtensilsCrossed, ShieldCheck, LogIn, User as UserIcon, Store } from 'lucide-react';
 
 export function Navbar() {
   const { user } = useAuth();
@@ -184,15 +184,19 @@ export function Navbar() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                padding: '0.5rem 1rem',
+                padding: '0.45rem 0.85rem',
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-primary-500)',
-                color: '#FFFFFF',
+                backgroundColor: 'var(--color-surface)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-ink-700)',
                 fontWeight: 600,
-                fontSize: '0.875rem',
+                fontSize: '0.825rem',
+                transition: 'all var(--transition-fast)',
               }}
+              title="Portal Khusus Pemilik Stan & Administrator"
             >
-              <LogIn size={16} /> Masuk
+              <Store size={15} color="var(--color-primary-500)" />
+              <span className="tenant-login-label">Portal Pengelola</span>
             </Link>
           )}
         </div>

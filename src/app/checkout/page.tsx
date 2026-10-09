@@ -134,19 +134,17 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Validasi input guest jika pengguna belum login
-    if (!user) {
-      if (!guestName.trim() || guestName.trim().length < 2) {
-        setErrorMessage('Masukkan nama lengkap pemesan (minimal 2 karakter).');
-        return;
-      }
-      const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{6,10}$/;
-      if (!phoneRegex.test(guestPhone.trim())) {
-        setErrorMessage(
-          'Format nomor WhatsApp tidak valid. Gunakan format seluler Indonesia (contoh: 081234567890).'
-        );
-        return;
-      }
+    // Validasi input pemesan langsung tanpa login
+    if (!guestName.trim() || guestName.trim().length < 2) {
+      setErrorMessage('Masukkan nama lengkap pemesan (minimal 2 karakter).');
+      return;
+    }
+    const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{6,10}$/;
+    if (!phoneRegex.test(guestPhone.trim())) {
+      setErrorMessage(
+        'Format nomor WhatsApp tidak valid. Gunakan format seluler Indonesia (contoh: 081234567890).'
+      );
+      return;
     }
 
     setSubmitting(true);
@@ -157,18 +155,15 @@ export default function CheckoutPage() {
         pickupSlotId: selectedSlot.slotId,
         notes: orderNotes.trim() || undefined,
         idempotencyKey,
-      };
-
-      if (!user) {
-        payload.isGuest = true;
-        payload.guestName = guestName.trim();
-        payload.guestPhone = guestPhone.trim();
-        payload.guestItems = cart?.items.map((i) => ({
+        isGuest: true,
+        guestName: guestName.trim(),
+        guestPhone: guestPhone.trim(),
+        guestItems: cart?.items.map((i) => ({
           menuId: i.menuId,
           quantity: i.quantity,
           notes: i.notes || undefined,
-        }));
-      }
+        })),
+      };
 
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -182,38 +177,36 @@ export default function CheckoutPage() {
         throw new Error(json.error?.message || 'Gagal memproses pesanan.');
       }
 
-      // Simpan biodata guest ke storage agar mudah digunakan kembali
-      if (!user) {
-        try {
-          localStorage.setItem(
-            GUEST_INFO_STORAGE_KEY,
-            JSON.stringify({ name: guestName.trim(), phone: guestPhone.trim() })
-          );
+      // Simpan biodata pemesan ke storage agar mudah digunakan kembali
+      try {
+        localStorage.setItem(
+          GUEST_INFO_STORAGE_KEY,
+          JSON.stringify({ name: guestName.trim(), phone: guestPhone.trim() })
+        );
 
-          // Simpan order history guest di localStorage
-          const prevOrders = JSON.parse(
-            localStorage.getItem(GUEST_ORDERS_STORAGE_KEY) || '[]'
-          );
-          prevOrders.unshift({
-            id: json.data.id,
-            orderNumber: json.data.orderNumber,
-            guestToken: json.data.guestToken,
-            tenantName: cart?.tenantName,
-            createdAt: new Date().toISOString(),
-          });
-          localStorage.setItem(
-            GUEST_ORDERS_STORAGE_KEY,
-            JSON.stringify(prevOrders.slice(0, 30))
-          );
-        } catch (storageErr) {
-          console.error('Storage error:', storageErr);
-        }
+        // Simpan order history di localStorage
+        const prevOrders = JSON.parse(
+          localStorage.getItem(GUEST_ORDERS_STORAGE_KEY) || '[]'
+        );
+        prevOrders.unshift({
+          id: json.data.id,
+          orderNumber: json.data.orderNumber,
+          guestToken: json.data.guestToken,
+          tenantName: cart?.tenantName,
+          createdAt: new Date().toISOString(),
+        });
+        localStorage.setItem(
+          GUEST_ORDERS_STORAGE_KEY,
+          JSON.stringify(prevOrders.slice(0, 30))
+        );
+      } catch (storageErr) {
+        console.error('Storage error:', storageErr);
       }
 
       // Kosongkan keranjang
       await clearCart();
 
-      // Redirect ke halaman pembayaran dengan token (jika guest)
+      // Redirect ke halaman pembayaran dengan token
       if (json.data.guestToken) {
         router.push(`/orders/${json.data.id}/pay?token=${json.data.guestToken}`);
       } else {
@@ -346,74 +339,62 @@ export default function CheckoutPage() {
           )}
 
           {/* SECTION: DATA PEMESAN */}
-          {user ? (
-            <Card padding="md" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--color-primary-500)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-ink-500)', letterSpacing: '0.05em' }}>
-                    Data Pemesan (Akun Terdaftar)
-                  </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-ink-900)', marginTop: '0.2rem' }}>
-                    {user.name}
-                  </div>
-                  <div style={{ fontSize: '0.825rem', color: 'var(--color-ink-500)' }}>
-                    {user.email} {user.phone ? `· ${user.phone}` : ''}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-forest)', fontSize: '0.8rem', fontWeight: 700 }}>
-                  <CheckCircle2 size={18} /> Terverifikasi
-                </div>
+          <Card padding="lg" style={{ marginBottom: '1.5rem', border: '1px solid var(--color-primary-200)', background: 'linear-gradient(180deg, rgba(240, 89, 42, 0.03) 0%, #FFFFFF 100%)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Sparkles size={18} color="var(--color-primary-600)" />
+                <span style={{ fontSize: '1rem', fontWeight: 850, color: 'var(--color-ink-900)' }}>
+                  Data Pemesan (Tanpa Perlu Login)
+                </span>
               </div>
-            </Card>
-          ) : (
-            <Card padding="lg" style={{ marginBottom: '1.5rem', border: '1px solid var(--color-primary-200)', background: 'linear-gradient(180deg, rgba(240, 89, 42, 0.03) 0%, #FFFFFF 100%)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Sparkles size={18} color="var(--color-primary-600)" />
-                  <span style={{ fontSize: '1rem', fontWeight: 850, color: 'var(--color-ink-900)' }}>
-                    Pesan Langsung (Tanpa Login)
-                  </span>
-                </div>
-                <Link href="/login" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>
-                  Sudah punya akun? Masuk
-                </Link>
-              </div>
-              <p style={{ fontSize: '0.825rem', color: 'var(--color-ink-500)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
-                Isi nama dan nomor WhatsApp Anda agar stan dapat mengonfirmasi pesanan dan Anda dapat mengambil makanan tepat waktu.
-              </p>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: 'var(--color-forest)',
+                  background: '#ECFDF5',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                Langsung Pesan
+              </span>
+            </div>
+            <p style={{ fontSize: '0.825rem', color: 'var(--color-ink-500)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
+              Cukup isi nama dan nomor WhatsApp Anda agar stan dapat menyiapkan pesanan dan memverifikasi saat pengambilan.
+            </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-ink-800)', marginBottom: '0.35rem' }}>
-                    Nama Lengkap / Panggilan <span style={{ color: 'var(--color-danger)' }}>*</span>
-                  </label>
-                  <Input
-                    placeholder="Contoh: Dimas Setiawan"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    required
-                  />
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-ink-800)', marginBottom: '0.35rem' }}>
+                  Nama Lengkap / Panggilan <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </label>
+                <Input
+                  placeholder="Contoh: Rina Kartika"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  required
+                />
+              </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-ink-800)', marginBottom: '0.35rem' }}>
-                    Nomor WhatsApp / HP <span style={{ color: 'var(--color-danger)' }}>*</span>
-                  </label>
-                  <Input
-                    type="tel"
-                    placeholder="Contoh: 081234567890"
-                    value={guestPhone}
-                    onChange={(e) => setGuestPhone(e.target.value)}
-                    required
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.775rem', color: 'var(--color-ink-500)', marginTop: '0.35rem' }}>
-                    <Info size={13} />
-                    <span>Digunakan untuk identifikasi di stan dan notifikasi pesanan</span>
-                  </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-ink-800)', marginBottom: '0.35rem' }}>
+                  Nomor WhatsApp / HP <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="Contoh: 081234567890"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  required
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.775rem', color: 'var(--color-ink-500)', marginTop: '0.35rem' }}>
+                  <Info size={13} />
+                  <span>Digunakan untuk identifikasi antrean di stan dan konfirmasi pengambilan</span>
                 </div>
               </div>
-            </Card>
-          )}
+            </div>
+          </Card>
 
           {/* Section: Pilih Tanggal */}
           <div style={{ marginBottom: '1.5rem' }}>

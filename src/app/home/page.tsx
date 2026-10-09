@@ -4,6 +4,7 @@ import { Navbar } from '@/components/ui/Navbar';
 import { BottomNav } from '@/components/ui/BottomNav';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { UpcomingPickupBanner } from '@/components/home/UpcomingPickupBanner';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/jwt';
@@ -115,113 +116,8 @@ export default async function CustomerHomePage() {
             </Link>
           </div>
 
-          {/* UPCOMING PICKUP CARD (Mockup Signature Feature) */}
-          {activeOrder ? (
-            <Link href={`/orders/${activeOrder.id}`}>
-              <div
-                className="interactive-card pressable"
-                style={{
-                  background: 'var(--gradient-pickup)',
-                  borderRadius: 'var(--radius-xl)',
-                  padding: '1.25rem 1.5rem',
-                  color: '#FFFFFF',
-                  marginBottom: '1.5rem',
-                  boxShadow: 'var(--shadow-float)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9 }}>
-                    Upcoming Pickup
-                  </span>
-                  <span
-                    style={{
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: 'var(--radius-full)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      backdropFilter: 'blur(4px)',
-                    }}
-                  >
-                    {activeOrder.status === 'READY_FOR_PICKUP'
-                      ? 'Siap Diambil 🎉'
-                      : activeOrder.status === 'PREPARING'
-                      ? 'Sedang Dimasak'
-                      : 'Diterima Tenant'}
-                  </span>
-                </div>
-
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.25rem' }}>
-                  Ambil pukul {formatSlotTime(activeOrder.pickupSlot.startAt, activeOrder.pickupSlot.endAt)}
-                </div>
-
-                <div style={{ fontSize: '0.875rem', opacity: 0.95, marginBottom: '0.75rem' }}>
-                  {activeOrder.tenant.name} · Order #{activeOrder.orderNumber}
-                </div>
-
-                {/* Progress bar */}
-                <div
-                  style={{
-                    height: '6px',
-                    borderRadius: 'var(--radius-full)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      height: '100%',
-                      backgroundColor: '#FFFFFF',
-                      width:
-                        activeOrder.status === 'READY_FOR_PICKUP'
-                          ? '100%'
-                          : activeOrder.status === 'PREPARING'
-                          ? '70%'
-                          : '40%',
-                      borderRadius: 'var(--radius-full)',
-                      transition: 'width 0.5s ease-in-out',
-                    }}
-                  />
-                </div>
-              </div>
-            </Link>
-          ) : (
-            <div
-              style={{
-                background: 'linear-gradient(135deg, #1C1917 0%, #292524 100%)',
-                borderRadius: 'var(--radius-xl)',
-                padding: '1.25rem 1.5rem',
-                color: '#FFFFFF',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>Pesan Makanan Lebih Awal</div>
-                <div style={{ fontSize: '0.8rem', color: '#A8A29E', marginTop: '0.2rem' }}>
-                  Tentukan jam ambil, tanpa buang waktu mengantre
-                </div>
-              </div>
-              <Link
-                href="/tenants"
-                style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--color-primary-500)',
-                  color: '#FFFFFF',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                Pesan <ArrowRight size={16} />
-              </Link>
-            </div>
-          )}
+          {/* UPCOMING PICKUP CARD (Supports Guest & Logged-in Orders) */}
+          <UpcomingPickupBanner initialOrder={activeOrder} />
 
           {/* Search Bar Input */}
           <Link href="/tenants" style={{ display: 'block', marginBottom: '1.25rem' }}>

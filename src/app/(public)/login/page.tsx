@@ -80,19 +80,53 @@ export default function LoginPage() {
             </span>
           </Link>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '0.75rem', color: 'var(--color-ink-900)' }}>
-            Selamat Datang Kembali
+            Portal Pengelola (Tenant & Admin)
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-ink-500)' }}>
-            Masuk untuk melanjutkan pesanan atau kelola stan
+            Masuk khusus pemilik stan makanan dan staf administrator kantin
           </p>
+        </div>
+
+        {/* Notice Khusus Pembeli */}
+        <div
+          style={{
+            padding: '0.9rem 1rem',
+            backgroundColor: '#EFF6FF',
+            border: '1px solid #BFDBFE',
+            borderRadius: 'var(--radius-lg)',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem',
+          }}
+        >
+          <UtensilsCrossed size={20} color="#2563EB" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ fontSize: '0.85rem', color: '#1E40AF', lineHeight: 1.45 }}>
+            <strong>Untuk Pembeli & Mahasiswa:</strong> Anda <b>tidak perlu login</b>! Pemesanan di FoodQueue kini 100% langsung tanpa akun.
+            <div style={{ marginTop: '0.35rem' }}>
+              <Link
+                href="/home"
+                style={{
+                  color: '#1D4ED8',
+                  fontWeight: 700,
+                  textDecoration: 'underline',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                Pesan Makanan Langsung di Sini →
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Demo Accounts Pill Switcher */}
         <div
           style={{
             padding: '0.85rem',
-            backgroundColor: 'var(--color-primary-50)',
-            border: '1px solid var(--color-primary-200)',
+            backgroundColor: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-lg)',
             marginBottom: '1.25rem',
           }}
@@ -108,59 +142,59 @@ export default function LoginPage() {
               marginBottom: '0.5rem',
             }}
           >
-            <Sparkles size={14} /> KLIK UNTUK AKUN DEMO PENGUJIAN:
+            <Sparkles size={14} /> AKUN DEMO PENGUJIAN PENGELOLA:
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
             <button
               type="button"
-              onClick={() => handleDemoFill('rina@mahasiswa.ac.id', 'User123!')}
+              onClick={() => handleDemoFill('tenant.sari@foodqueue.id', 'Tenant123!')}
               style={{
-                padding: '0.3rem 0.6rem',
+                padding: '0.35rem 0.65rem',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--color-primary-50)',
                 border: '1px solid var(--color-primary-200)',
                 color: 'var(--color-ink-900)',
                 cursor: 'pointer',
               }}
             >
-              👤 Customer (Rina)
+              🏪 Tenant 1: Bu Sari
             </button>
 
             <button
               type="button"
-              onClick={() => handleDemoFill('tenant.sari@foodqueue.id', 'Tenant123!')}
+              onClick={() => handleDemoFill('tenant.kencana@foodqueue.id', 'Tenant123!')}
               style={{
-                padding: '0.3rem 0.6rem',
+                padding: '0.35rem 0.65rem',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--color-primary-50)',
                 border: '1px solid var(--color-primary-200)',
                 color: 'var(--color-ink-900)',
                 cursor: 'pointer',
               }}
             >
-              🏪 Tenant (Bu Sari)
+              🏪 Tenant 2: Mas Dimas
             </button>
 
             <button
               type="button"
               onClick={() => handleDemoFill('admin@foodqueue.id', 'Admin123!')}
               style={{
-                padding: '0.3rem 0.6rem',
+                padding: '0.35rem 0.65rem',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--color-primary-50)',
                 border: '1px solid var(--color-primary-200)',
                 color: 'var(--color-ink-900)',
                 cursor: 'pointer',
               }}
             >
-              🛡️ Admin (Budi)
+              🛡️ Admin: Budi
             </button>
           </div>
         </div>
@@ -185,11 +219,11 @@ export default function LoginPage() {
             )}
 
             <Input
-              label="Alamat Email"
+              label="Email Akun Pengelola"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="nama@email.com"
+              placeholder="stan@foodqueue.id atau admin@foodqueue.id"
               required
             />
 
@@ -203,7 +237,7 @@ export default function LoginPage() {
             />
 
             <Button type="submit" size="lg" loading={loading} style={{ width: '100%', marginTop: '0.5rem' }}>
-              Masuk ke Akun
+              Masuk ke Portal Pengelola
             </Button>
           </form>
 
@@ -217,11 +251,7 @@ export default function LoginPage() {
               color: 'var(--color-ink-500)',
             }}
           >
-            Belum punya akun?{' '}
-            <Link href="/register" style={{ color: 'var(--color-primary-600)', fontWeight: 700 }}>
-              Daftar Mahasiswa
-            </Link>{' '}
-            atau{' '}
+            Ingin mendaftarkan stan baru di kantin?{' '}
             <Link href="/register/tenant" style={{ color: 'var(--color-primary-600)', fontWeight: 700 }}>
               Daftar Stan Tenant
             </Link>

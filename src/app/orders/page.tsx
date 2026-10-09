@@ -32,23 +32,22 @@ export default function CustomerOrdersPage() {
       setLoading(true);
       let url = `/api/orders?scope=${scope}&pageSize=30`;
 
-      if (!user) {
-        // Mode Tamu: baca order ID & token yang tersimpan di browser
-        try {
-          const guestOrders = JSON.parse(
-            localStorage.getItem('foodqueue_guest_orders') || '[]'
-          );
-          if (guestOrders.length > 0) {
-            const guestIds = guestOrders.map((o: any) => o.id).join(',');
-            const guestTokens = guestOrders.map((o: any) => o.guestToken).join(',');
-            url += `&guestOrderIds=${encodeURIComponent(guestIds)}&guestTokens=${encodeURIComponent(guestTokens)}`;
-          } else {
-            // Tamu belum pernah pesan
-            setOrders([]);
-            setLoading(false);
-            return;
-          }
-        } catch {
+      // Selalu baca pesanan yang tersimpan di browser perangkat ini
+      try {
+        const guestOrders = JSON.parse(
+          localStorage.getItem('foodqueue_guest_orders') || '[]'
+        );
+        if (guestOrders.length > 0) {
+          const guestIds = guestOrders.map((o: any) => o.id).join(',');
+          const guestTokens = guestOrders.map((o: any) => o.guestToken).join(',');
+          url += `&guestOrderIds=${encodeURIComponent(guestIds)}&guestTokens=${encodeURIComponent(guestTokens)}`;
+        } else if (!user) {
+          setOrders([]);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        if (!user) {
           setOrders([]);
           setLoading(false);
           return;
@@ -84,23 +83,21 @@ export default function CustomerOrdersPage() {
             <h1 style={{ fontSize: '1.5rem', fontWeight: 850, color: 'var(--color-text)', marginBottom: '0.25rem' }}>
               Daftar Pesanan Saya
             </h1>
-            {!user && (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  color: '#92400E',
-                  background: '#FEF3C7',
-                  padding: '0.25rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                <Sparkles size={14} /> Mode Tamu (Tersimpan Lokal)
-              </span>
-            )}
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                color: 'var(--color-forest)',
+                background: '#ECFDF5',
+                padding: '0.25rem 0.65rem',
+                borderRadius: 'var(--radius-full)',
+              }}
+            >
+              <Sparkles size={14} /> Tersimpan di Perangkat Ini
+            </span>
           </div>
           <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
             Pantau status pre-order dan riwayat pengambilan makanan Anda
