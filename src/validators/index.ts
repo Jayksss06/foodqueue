@@ -88,6 +88,18 @@ export const checkoutSchema = z.object({
   pickupSlotId: z.string().min(1, 'Pickup slot harus dipilih'),
   notes: z.string().max(300, 'Catatan pesanan maksimal 300 karakter').optional().or(z.literal('')),
   idempotencyKey: z.string().uuid('Idempotency key harus berupa format UUID v4'),
+  isGuest: z.boolean().optional(),
+  guestName: z.string().min(2, 'Nama pemesan minimal 2 karakter').max(100).optional(),
+  guestPhone: z.string().regex(/^(\+62|62|0)8[1-9][0-9]{6,10}$/, 'Format nomor WhatsApp / HP tidak valid').optional(),
+  guestItems: z
+    .array(
+      z.object({
+        menuId: z.string().min(1),
+        quantity: z.number().int().min(1),
+        notes: z.string().max(200).optional().or(z.literal('')),
+      })
+    )
+    .optional(),
 });
 
 export const updateOrderStatusSchema = z.object({
@@ -116,10 +128,12 @@ export const verifyPickupSchema = z.object({
 export const initiatePaymentSchema = z.object({
   orderId: z.string().min(1, 'ID order harus diisi'),
   method: z.enum(['QRIS', 'EWALLET', 'VIRTUAL_ACCOUNT']),
+  token: z.string().optional(),
 });
 
 export const simulatePaymentSchema = z.object({
   outcome: z.enum(['SUCCESS', 'FAILURE']),
+  token: z.string().optional(),
 });
 
 // ================= REVIEW SCHEMAS =================

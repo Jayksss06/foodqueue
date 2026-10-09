@@ -238,7 +238,11 @@ model PickupSlot {
 model Order {
   id             String      @id @default(cuid())
   orderNumber    String      @unique @map("order_number")
-  userId         String      @map("user_id")
+  userId         String?     @map("user_id")
+  isGuest        Boolean     @default(false) @map("is_guest")
+  guestName      String?     @map("guest_name")
+  guestPhone     String?     @map("guest_phone")
+  guestToken     String?     @unique @map("guest_token")
   tenantId       String      @map("tenant_id")
   pickupSlotId   String      @map("pickup_slot_id")
   subtotal       Int
@@ -247,7 +251,7 @@ model Order {
   status         OrderStatus @default(PENDING_PAYMENT)
   notes          String?
   pickupCode     String      @unique @map("pickup_code")
-  idempotencyKey String      @map("idempotency_key")
+  idempotencyKey String      @unique @map("idempotency_key")
   expiresAt      DateTime?   @map("expires_at")
   paidAt         DateTime?   @map("paid_at")
   acceptedAt     DateTime?   @map("accepted_at")
@@ -258,7 +262,7 @@ model Order {
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
-  user       User             @relation(fields: [userId], references: [id])
+  user       User?            @relation(fields: [userId], references: [id])
   tenant     Tenant           @relation(fields: [tenantId], references: [id])
   pickupSlot PickupSlot       @relation(fields: [pickupSlotId], references: [id])
   items      OrderItem[]
@@ -266,9 +270,9 @@ model Order {
   statusLogs OrderStatusLog[]
   review     Review?
 
-  @@unique([userId, idempotencyKey])
   @@index([tenantId, status, createdAt])
   @@index([userId, createdAt])
+  @@index([guestPhone])
   @@index([pickupSlotId])
   @@index([status, expiresAt])
   @@map("orders")

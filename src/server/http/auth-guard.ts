@@ -84,6 +84,22 @@ export function withAuth<T = unknown>(
   };
 }
 
+export interface OptionalAuthContext {
+  user: UserSession | null;
+}
+
+/**
+ * Higher-order wrapper for Route Handlers allowing both guest and authenticated requests.
+ */
+export function withOptionalAuth<T = unknown>(
+  handler: (req: NextRequest, ctx: OptionalAuthContext, routeContext?: T) => Promise<Response>
+) {
+  return async (req: NextRequest, routeContext?: T): Promise<Response> => {
+    const user = await getAuthenticatedUser(req);
+    return handler(req, { user }, routeContext);
+  };
+}
+
 /**
  * Helper to safely extract dynamic route parameters regardless of Next.js sync/async params
  */

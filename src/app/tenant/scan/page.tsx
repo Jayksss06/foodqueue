@@ -203,7 +203,7 @@ export default function TenantScanPickupPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <User size={16} color="var(--color-text-muted)" />
               <span style={{ fontSize: '0.9rem', fontWeight: 750 }}>
-                Pelanggan: {verifiedOrder.user?.name || 'Mahasiswa'}
+                Pelanggan: {verifiedOrder.isGuest ? `${verifiedOrder.guestName} (Tamu / ${verifiedOrder.guestPhone})` : verifiedOrder.user?.name || 'Pelanggan'}
               </span>
             </div>
 

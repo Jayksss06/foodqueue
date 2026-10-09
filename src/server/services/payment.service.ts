@@ -8,8 +8,11 @@ export class PaymentService {
   /**
    * Menginisialisasi pembayaran untuk pesanan PENDING_PAYMENT
    */
+  /**
+   * Menginisialisasi pembayaran untuk pesanan PENDING_PAYMENT (Mendukung Registered User & Guest)
+   */
   public static async initiatePayment(
-    user: UserSession,
+    auth: { user?: UserSession | null; guestToken?: string | null } | UserSession,
     orderId: string,
     method: PaymentMethod
   ) {
@@ -21,7 +24,18 @@ export class PaymentService {
       },
     });
 
-    if (!order || order.userId !== user.id) {
+    if (!order) {
+      throw new Error('NOT_FOUND: Pesanan tidak ditemukan.');
+    }
+
+    const sessionUser = 'role' in auth ? auth : auth.user;
+    const guestToken = 'role' in auth ? null : auth.guestToken;
+
+    const isAuthorized =
+      (sessionUser && order.userId === sessionUser.id) ||
+      (guestToken && order.isGuest && order.guestToken === guestToken);
+
+    if (!isAuthorized) {
       throw new Error('NOT_FOUND: Pesanan tidak ditemukan.');
     }
 
@@ -33,14 +47,17 @@ export class PaymentService {
       throw new Error('ORDER_EXPIRED: Batas waktu pembayaran telah habis. Silakan buat pesanan baru.');
     }
 
+    const customerName = sessionUser?.name || order.guestName || 'Pelanggan Tamu';
+    const customerEmail = sessionUser?.email || (order.guestPhone ? `${order.guestPhone}@guest.foodqueue` : 'guest@foodqueue.local');
+
     // Panggil payment provider abstraction (Mock / Midtrans / Xendit)
     const charge = await defaultPaymentProvider.createCharge({
       orderId: order.id,
       orderNumber: order.orderNumber,
       amount: order.total,
       method,
-      customerName: user.name,
-      customerEmail: user.email,
+      customerName,
+      customerEmail,
     });
 
     // Update payment record di database
@@ -63,7 +80,7 @@ export class PaymentService {
    * Mensimulasikan hasil pembayaran (Khusus Mock Provider saat testing/demo)
    */
   public static async simulatePaymentOutcome(
-    user: UserSession,
+    auth: { user?: UserSession | null; guestToken?: string | null } | UserSession,
     orderId: string,
     outcome: 'SUCCESS' | 'FAILURE'
   ) {
@@ -75,7 +92,18 @@ export class PaymentService {
       },
     });
 
-    if (!order || order.userId !== user.id) {
+    if (!order) {
+      throw new Error('NOT_FOUND: Pesanan tidak ditemukan.');
+    }
+
+    const sessionUser = 'role' in auth ? auth : auth.user;
+    const guestToken = 'role' in auth ? null : auth.guestToken;
+
+    const isAuthorized =
+      (sessionUser && order.userId === sessionUser.id) ||
+      (guestToken && order.isGuest && order.guestToken === guestToken);
+
+    if (!isAuthorized) {
       throw new Error('NOT_FOUND: Pesanan tidak ditemukan.');
     }
 
@@ -115,7 +143,7 @@ export class PaymentService {
 
       // 3. Ubah status order ke PAID lewat OrderService
       const updatedOrder = await OrderService.changeOrderStatus(
-        { id: user.id, role: 'CUSTOMER' },
+        { id: sessionUser?.id || 'GUEST', role: 'CUSTOMER' },
         order.id,
         'PAID',
         'Pembayaran simulasi berhasil diverifikasi.'

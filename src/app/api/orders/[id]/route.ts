@@ -1,14 +1,16 @@
 import { NextRequest } from 'next/server';
-import { withAuth, AuthContext, getRouteParam } from '@/server/http/auth-guard';
+import { withOptionalAuth, OptionalAuthContext, getRouteParam } from '@/server/http/auth-guard';
 import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiNotFound, apiForbidden } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
 import QRCode from 'qrcode';
 
-export const GET = withAuth(
-  async (req: NextRequest, ctx: AuthContext, routeContext: unknown) => {
+export const GET = withOptionalAuth(
+  async (req: NextRequest, ctx: OptionalAuthContext, routeContext: unknown) => {
     try {
       const id = await getRouteParam(routeContext, 'id', req);
+      const { searchParams } = new URL(req.url);
+      const token = searchParams.get('token') || req.headers.get('x-guest-token');
 
       const order = await prisma.order.findUnique({
         where: { id },
@@ -30,12 +32,20 @@ export const GET = withAuth(
         return apiNotFound('Pesanan tidak ditemukan.');
       }
 
-      // Customer hanya boleh melihat pesanannya sendiri, Tenant hanya tokonya, Admin bebas
-      if (ctx.user.role === 'CUSTOMER' && order.userId !== ctx.user.id) {
-        return apiNotFound('Pesanan tidak ditemukan.');
-      }
+      // Authorization:
+      // 1. Guest matching secret token
+      const isGuestAuthorized = order.isGuest && !!token && order.guestToken === token;
 
-      if (ctx.user.role === 'TENANT' && ctx.user.tenantId !== order.tenantId) {
+      // 2. Customer yang login sesuai userId
+      const isCustomerAuthorized = ctx.user?.role === 'CUSTOMER' && order.userId === ctx.user.id;
+
+      // 3. Tenant dari toko terkait
+      const isTenantAuthorized = ctx.user?.role === 'TENANT' && ctx.user.tenantId === order.tenantId;
+
+      // 4. Admin
+      const isAdminAuthorized = ctx.user?.role === 'ADMIN';
+
+      if (!isGuestAuthorized && !isCustomerAuthorized && !isTenantAuthorized && !isAdminAuthorized) {
         return apiNotFound('Pesanan tidak ditemukan.');
       }
 

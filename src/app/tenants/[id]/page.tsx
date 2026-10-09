@@ -56,20 +56,23 @@ export default function TenantDetailPage({
   }, [id]);
 
   const handleOpenAddModal = (menu: any) => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
     setSelectedMenu(menu);
     setQuantity(1);
     setNotes('');
   };
 
   const handleConfirmAddToCart = async (replaceCart = false) => {
-    if (!selectedMenu) return;
+    if (!selectedMenu || !tenant) return;
     setIsAdding(true);
 
-    const result = await addItem(selectedMenu.id, quantity, notes, replaceCart);
+    const result = await addItem(selectedMenu.id, quantity, notes, replaceCart, {
+      name: selectedMenu.name,
+      price: selectedMenu.price,
+      imageUrl: selectedMenu.imageUrl,
+      tenantId: tenant.id,
+      tenantName: tenant.name,
+      stock: selectedMenu.stock,
+    });
     setIsAdding(false);
 
     if (result.success) {

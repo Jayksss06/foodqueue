@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
-import { withAuth, AuthContext } from '@/server/http/auth-guard';
+import { withOptionalAuth, OptionalAuthContext } from '@/server/http/auth-guard';
 import { checkoutSchema } from '@/validators';
 import { OrderService } from '@/server/services/order.service';
 import { apiSuccess } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
 import { prisma } from '@/lib/prisma';
 
-export const POST = withAuth(async (req: NextRequest, ctx: AuthContext) => {
+export const POST = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthContext) => {
   try {
     const body = await req.json();
     const validated = checkoutSchema.parse(body);
@@ -18,7 +18,7 @@ export const POST = withAuth(async (req: NextRequest, ctx: AuthContext) => {
   }
 });
 
-export const GET = withAuth(async (req: NextRequest, ctx: AuthContext) => {
+export const GET = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthContext) => {
   try {
     // Jalankan maintenance pembersihan stale orders secara lazy
     OrderService.expireStaleOrders().catch((err) => console.error(err));
@@ -27,8 +27,27 @@ export const GET = withAuth(async (req: NextRequest, ctx: AuthContext) => {
     const scope = searchParams.get('scope'); // 'active' atau 'history'
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
+    const guestOrderIds = searchParams.get('guestOrderIds');
+    const guestTokens = searchParams.get('guestTokens');
 
-    const where: any = { userId: ctx.user.id };
+    const where: any = {};
+
+    if (ctx.user) {
+      where.userId = ctx.user.id;
+    } else if (guestOrderIds) {
+      const idsList = guestOrderIds.split(',').map((s) => s.trim()).filter(Boolean);
+      if (idsList.length === 0) {
+        return apiSuccess([], { page: 1, pageSize, total: 0, totalPages: 0 });
+      }
+      where.id = { in: idsList };
+      where.isGuest = true;
+      if (guestTokens) {
+        const tokenList = guestTokens.split(',').map((s) => s.trim()).filter(Boolean);
+        where.guestToken = { in: tokenList };
+      }
+    } else {
+      return apiSuccess([], { page: 1, pageSize, total: 0, totalPages: 0 });
+    }
 
     if (scope === 'active') {
       where.status = {

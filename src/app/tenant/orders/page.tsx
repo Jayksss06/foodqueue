@@ -74,9 +74,12 @@ export default function TenantOrdersManagementPage() {
   const filteredOrders = orders.filter((order) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
+    const customerName = (order.isGuest ? order.guestName : order.user?.name) || '';
+    const customerPhone = (order.isGuest ? order.guestPhone : order.user?.phone) || '';
     return (
       order.orderNumber.toLowerCase().includes(q) ||
-      (order.user?.name && order.user.name.toLowerCase().includes(q)) ||
+      customerName.toLowerCase().includes(q) ||
+      customerPhone.toLowerCase().includes(q) ||
       order.pickupCode.toLowerCase().includes(q)
     );
   });
@@ -211,8 +214,17 @@ export default function TenantOrdersManagementPage() {
                         </div>
                       </td>
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <div style={{ fontWeight: 650 }}>{ord.user?.name || 'Pelanggan'}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{ord.user?.phone || '-'}</div>
+                        <div style={{ fontWeight: 650, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          {ord.isGuest ? ord.guestName : ord.user?.name || 'Pelanggan'}
+                          {ord.isGuest && (
+                            <span style={{ fontSize: '0.7rem', color: '#92400E', background: '#FEF3C7', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 700 }}>
+                              Tamu
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                          {ord.isGuest ? ord.guestPhone : ord.user?.phone || '-'}
+                        </div>
                       </td>
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <span style={{
@@ -301,8 +313,17 @@ export default function TenantOrdersManagementPage() {
             </div>
 
             <div style={{ background: 'var(--color-surface-hover)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Pelanggan: {selectedOrder.user?.name}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>No. Telp / WhatsApp: {selectedOrder.user?.phone || '-'}</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                Pelanggan: {selectedOrder.isGuest ? selectedOrder.guestName : selectedOrder.user?.name || 'Pelanggan'}
+                {selectedOrder.isGuest && (
+                  <span style={{ fontSize: '0.7rem', color: '#92400E', background: '#FEF3C7', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 750 }}>
+                    Tamu (Tanpa Login)
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                No. Telp / WhatsApp: {selectedOrder.isGuest ? selectedOrder.guestPhone : selectedOrder.user?.phone || '-'}
+              </div>
             </div>
 
             <div>

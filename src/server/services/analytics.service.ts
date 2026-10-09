@@ -85,8 +85,8 @@ export class AnalyticsService {
         slotMap.get(slotKey)!.orders.push({
           id: order.id,
           orderNumber: order.orderNumber,
-          customerName: order.user.name,
-          customerPhone: order.user.phone,
+          customerName: order.user?.name || order.guestName || 'Pelanggan Tamu',
+          customerPhone: order.user?.phone || order.guestPhone || '-',
           status: order.status,
           total: order.total,
           items: order.items.map((i) => `${i.quantity}x ${i.menuNameSnapshot}`).join(', '),

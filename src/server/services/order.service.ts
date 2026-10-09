@@ -3,7 +3,7 @@ import { UserSession, OrderStatus } from '@/types';
 import { OrderStateMachine, ActorRole } from '../domain/order-state-machine';
 import { Pricing } from '../domain/pricing';
 import { PickupSlotService } from './pickup-slot.service';
-import { generatePickupCode } from '@/lib/utils';
+import { generatePickupCode, generateUUID } from '@/lib/utils';
 import { NotificationService } from './notification.service';
 import { defaultPaymentProvider } from '../providers/payment/mock-payment-provider';
 
@@ -27,23 +27,24 @@ export class OrderService {
   }
 
   /**
-   * Transaksi atomik pembuatan pesanan (Checkout Flow BR-01 s/d BR-08)
+   * Transaksi atomik pembuatan pesanan (Mendukung Registered User & Guest Checkout)
    */
   public static async createOrder(
-    user: UserSession,
+    user: UserSession | null,
     input: {
       pickupSlotId: string;
       notes?: string;
       idempotencyKey: string;
+      isGuest?: boolean;
+      guestName?: string;
+      guestPhone?: string;
+      guestItems?: Array<{ menuId: string; quantity: number; notes?: string }>;
     }
   ) {
     // 1. Cek idempotency: jika request yang sama sudah pernah berhasil dibuat, kembalikan order tersebut
     const existingOrder = await prisma.order.findUnique({
       where: {
-        userId_idempotencyKey: {
-          userId: user.id,
-          idempotencyKey: input.idempotencyKey,
-        },
+        idempotencyKey: input.idempotencyKey,
       },
       include: {
         items: true,
@@ -57,28 +58,118 @@ export class OrderService {
       return existingOrder;
     }
 
+    const isGuestOrder = !user || !!input.isGuest;
+    if (isGuestOrder) {
+      if (!input.guestName || input.guestName.trim().length < 2) {
+        throw new Error('GUEST_NAME_REQUIRED: Nama lengkap pemesan minimal 2 karakter.');
+      }
+      if (!input.guestPhone || !/^(\+62|62|0)8[1-9][0-9]{6,10}$/.test(input.guestPhone.trim())) {
+        throw new Error('GUEST_PHONE_REQUIRED: Nomor WhatsApp / HP tidak valid.');
+      }
+    }
+
     // 2. Jalankan transaksi atomik untuk reservasi stok, kapasitas slot, dan pembuatan order
     return await prisma.$transaction(
       async (tx) => {
-        // Ambil cart customer beserta items dan tenant
-        const cart = await tx.cart.findUnique({
-          where: { userId: user.id },
-          include: {
-            tenant: true,
-            items: {
-              include: {
-                menu: true,
+        let tenantId: string;
+        const itemsToOrder: Array<{
+          menuId: string;
+          name: string;
+          priceSnapshot: number;
+          quantity: number;
+          preparationTime: number;
+          notes?: string | null;
+        }> = [];
+
+        let cartIdToClean: string | null = null;
+
+        if (user && !input.isGuest && (!input.guestItems || input.guestItems.length === 0)) {
+          // Ambil cart customer dari database
+          const cart = await tx.cart.findUnique({
+            where: { userId: user.id },
+            include: {
+              tenant: true,
+              items: {
+                include: {
+                  menu: true,
+                },
               },
             },
-          },
-        });
+          });
 
-        if (!cart || cart.items.length === 0) {
-          throw new Error('CART_EMPTY: Keranjang belanja Anda masih kosong.');
-        }
+          if (!cart || cart.items.length === 0) {
+            throw new Error('CART_EMPTY: Keranjang belanja Anda masih kosong.');
+          }
 
-        if (!cart.tenant || cart.tenant.status !== 'ACTIVE' || !cart.tenant.isAcceptingOrders) {
-          throw new Error('TENANT_CLOSED: Tenant sedang tutup atau tidak menerima pesanan baru.');
+          if (!cart.tenant || cart.tenant.status !== 'ACTIVE' || !cart.tenant.isAcceptingOrders) {
+            throw new Error('TENANT_CLOSED: Tenant sedang tutup atau tidak menerima pesanan baru.');
+          }
+
+          tenantId = cart.tenantId!;
+          cartIdToClean = cart.id;
+
+          for (const item of cart.items) {
+            if (item.priceSnapshot !== item.menu.price) {
+              await tx.cartItem.update({
+                where: { id: item.id },
+                data: { priceSnapshot: item.menu.price },
+              });
+              throw new Error(
+                `PRICE_CHANGED: Harga menu ${item.menu.name} telah berubah. Silakan tinjau kembali keranjang Anda.`
+              );
+            }
+
+            itemsToOrder.push({
+              menuId: item.menuId,
+              name: item.menu.name,
+              priceSnapshot: item.priceSnapshot,
+              quantity: item.quantity,
+              preparationTime: item.menu.preparationTime,
+              notes: item.notes,
+            });
+          }
+        } else {
+          // Guest order atau order dengan item eksplisit dari keranjang lokal
+          const rawItems = input.guestItems;
+          if (!rawItems || rawItems.length === 0) {
+            throw new Error('CART_EMPTY: Keranjang belanja masih kosong.');
+          }
+
+          const menuIds = rawItems.map((i) => i.menuId);
+          const menus = await tx.menu.findMany({
+            where: { id: { in: menuIds }, deletedAt: null },
+            include: { tenant: true },
+          });
+
+          if (menus.length !== menuIds.length) {
+            throw new Error('MENU_NOT_FOUND: Salah satu menu tidak ditemukan atau sudah dihapus.');
+          }
+
+          // Pastikan semua menu berasal dari 1 tenant yang sama
+          const firstTenantId = menus[0].tenantId;
+          const allSameTenant = menus.every((m) => m.tenantId === firstTenantId);
+          if (!allSameTenant) {
+            throw new Error('CART_TENANT_CONFLICT: Menu harus berasal dari satu tenant yang sama.');
+          }
+
+          const tenant = menus[0].tenant;
+          if (tenant.status !== 'ACTIVE' || !tenant.isAcceptingOrders) {
+            throw new Error('TENANT_CLOSED: Tenant sedang tutup atau tidak menerima pesanan baru.');
+          }
+
+          tenantId = tenant.id;
+
+          for (const raw of rawItems) {
+            const m = menus.find((menu) => menu.id === raw.menuId)!;
+            itemsToOrder.push({
+              menuId: m.id,
+              name: m.name,
+              priceSnapshot: m.price,
+              quantity: raw.quantity,
+              preparationTime: m.preparationTime,
+              notes: raw.notes?.trim() || null,
+            });
+          }
         }
 
         // Validasi slot pickup
@@ -86,12 +177,12 @@ export class OrderService {
           where: { id: input.pickupSlotId },
         });
 
-        if (!slot || slot.tenantId !== cart.tenantId || slot.status !== 'OPEN') {
+        if (!slot || slot.tenantId !== tenantId || slot.status !== 'OPEN') {
           throw new Error('SLOT_UNAVAILABLE: Waktu pengambilan ini tidak tersedia.');
         }
 
         // Cek lead time persiapan minimum
-        const maxPrepTime = Math.max(...cart.items.map((i) => i.menu.preparationTime), 10);
+        const maxPrepTime = Math.max(...itemsToOrder.map((i) => i.preparationTime), 10);
         const earliestTime = new Date(Date.now() + maxPrepTime * 60 * 1000);
         if (slot.startAt < earliestTime) {
           throw new Error(
@@ -99,22 +190,8 @@ export class OrderService {
           );
         }
 
-        // Cek perubahan harga antara cart snapshot dan harga live menu
-        for (const item of cart.items) {
-          if (item.priceSnapshot !== item.menu.price) {
-            // Perbarui snapshot di cart agar sinkron
-            await tx.cartItem.update({
-              where: { id: item.id },
-              data: { priceSnapshot: item.menu.price },
-            });
-            throw new Error(
-              `PRICE_CHANGED: Harga menu ${item.menu.name} telah berubah. Silakan tinjau kembali keranjang Anda.`
-            );
-          }
-        }
-
         // A. RESERVASI STOK ATOMIK (BR-03)
-        for (const item of cart.items) {
+        for (const item of itemsToOrder) {
           const updatedRows = await tx.$executeRaw`
             UPDATE "menus"
             SET "stock" = "stock" - ${item.quantity}
@@ -125,7 +202,7 @@ export class OrderService {
 
           if (updatedRows === 0) {
             throw new Error(
-              `MENU_OUT_OF_STOCK: Stok ${item.menu.name} tidak mencukupi untuk jumlah yang dipesan.`
+              `MENU_OUT_OF_STOCK: Stok ${item.name} tidak mencukupi untuk jumlah yang dipesan.`
             );
           }
         }
@@ -135,7 +212,7 @@ export class OrderService {
 
         // Hitung total biaya
         const pricing = Pricing.calculateTotals(
-          cart.items.map((i) => ({ price: i.priceSnapshot, quantity: i.quantity }))
+          itemsToOrder.map((i) => ({ price: i.priceSnapshot, quantity: i.quantity }))
         );
 
         // Generate nomor order dan pickup code unik
@@ -147,13 +224,18 @@ export class OrderService {
 
         const now = new Date();
         const expiresAt = new Date(now.getTime() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+        const guestToken = isGuestOrder ? generateUUID() : null;
 
         // C. BUAT ORDER RECORD
         const order = await tx.order.create({
           data: {
             orderNumber,
-            userId: user.id,
-            tenantId: cart.tenantId!,
+            userId: user ? user.id : null,
+            isGuest: isGuestOrder,
+            guestName: isGuestOrder ? (input.guestName?.trim() || 'Pelanggan Tamu') : null,
+            guestPhone: isGuestOrder ? (input.guestPhone?.trim() || null) : null,
+            guestToken,
+            tenantId,
             pickupSlotId: slot.id,
             subtotal: pricing.subtotal,
             fee: pricing.fee,
@@ -168,10 +250,10 @@ export class OrderService {
 
         // D. BUAT ORDER ITEMS DENGAN SNAPSHOT NAMA & HARGA
         await tx.orderItem.createMany({
-          data: cart.items.map((item) => ({
+          data: itemsToOrder.map((item) => ({
             orderId: order.id,
             menuId: item.menuId,
-            menuNameSnapshot: item.menu.name,
+            menuNameSnapshot: item.name,
             priceSnapshot: item.priceSnapshot,
             quantity: item.quantity,
             subtotal: item.priceSnapshot * item.quantity,
@@ -195,18 +277,22 @@ export class OrderService {
             orderId: order.id,
             fromStatus: null,
             toStatus: 'PENDING_PAYMENT',
-            actorId: user.id,
+            actorId: user ? user.id : null,
             actorRole: 'CUSTOMER',
-            note: 'Pesanan dibuat, menunggu pembayaran.',
+            note: isGuestOrder
+              ? `Pesanan tamu dibuat oleh ${input.guestName?.trim() || 'Pelanggan'}.`
+              : 'Pesanan dibuat, menunggu pembayaran.',
           },
         });
 
-        // G. KOSONGKAN KERANJANG
-        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-        await tx.cart.update({
-          where: { id: cart.id },
-          data: { tenantId: null },
-        });
+        // G. KOSONGKAN KERANJANG DI DATABASE JIKA DARI CART REGISTERED USER
+        if (cartIdToClean) {
+          await tx.cartItem.deleteMany({ where: { cartId: cartIdToClean } });
+          await tx.cart.update({
+            where: { id: cartIdToClean },
+            data: { tenantId: null },
+          });
+        }
 
         return order;
       },
@@ -332,13 +418,15 @@ export class OrderService {
         notificationMsg = `Pesanan #${order.orderNumber} tidak dapat diproses: ${note || 'Dapur sedang penuh'}. Dana Anda dikembalikan.`;
       }
 
-      await NotificationService.createNotification(
-        order.userId,
-        notificationTitle,
-        notificationMsg,
-        'ORDER',
-        `/orders/${order.id}`
-      );
+      if (order.userId) {
+        await NotificationService.createNotification(
+          order.userId,
+          notificationTitle,
+          notificationMsg,
+          'ORDER',
+          `/orders/${order.id}`
+        );
+      }
 
       return updatedOrder;
     });
@@ -380,11 +468,26 @@ export class OrderService {
   }
 
   /**
-   * Customer membatalkan pesanan (BR-10: hanya sebelum ACCEPTED)
+   * Customer membatalkan pesanan (Mendukung Registered User & Guest) (BR-10: hanya sebelum ACCEPTED)
    */
-  public static async cancelOrderByCustomer(user: UserSession, orderId: string, reason?: string) {
+  public static async cancelOrderByCustomer(
+    auth: { user?: UserSession | null; guestToken?: string | null } | UserSession,
+    orderId: string,
+    reason?: string
+  ) {
     const order = await prisma.order.findUnique({ where: { id: orderId } });
-    if (!order || order.userId !== user.id) {
+    if (!order) {
+      throw new Error('NOT_FOUND: Pesanan tidak ditemukan.');
+    }
+
+    const sessionUser = 'role' in auth ? auth : auth.user;
+    const guestToken = 'role' in auth ? null : auth.guestToken;
+
+    const isAuthorized =
+      (sessionUser && order.userId === sessionUser.id) ||
+      (guestToken && order.isGuest && order.guestToken === guestToken);
+
+    if (!isAuthorized) {
       throw new Error('NOT_FOUND: Pesanan tidak ditemukan.');
     }
 
@@ -395,7 +498,7 @@ export class OrderService {
     }
 
     return await this.changeOrderStatus(
-      { id: user.id, role: 'CUSTOMER' },
+      { id: sessionUser?.id || 'GUEST', role: 'CUSTOMER' },
       order.id,
       'CANCELLED',
       reason || 'Dibatalkan oleh pelanggan.'
