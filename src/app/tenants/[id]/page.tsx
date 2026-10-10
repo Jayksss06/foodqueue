@@ -484,8 +484,8 @@ export default function TenantDetailPage({
               </div>
             </div>
 
-            <Link href="/cart" className="view-cart-btn">
-              <span>Lihat Keranjang</span>
+            <Link href="/checkout" className="view-cart-btn">
+              <span>Lanjut Checkout</span>
               <ArrowRight size={15} />
             </Link>
           </div>

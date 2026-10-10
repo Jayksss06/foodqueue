@@ -18,6 +18,11 @@ import {
   AlertCircle,
   Sparkles,
   Info,
+  Store,
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
 } from 'lucide-react';
 
 const GUEST_INFO_STORAGE_KEY = 'foodqueue_guest_info';
@@ -26,7 +31,7 @@ const GUEST_ORDERS_STORAGE_KEY = 'foodqueue_guest_orders';
 export default function CheckoutPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { cart, refreshCart, clearCart } = useCart();
+  const { cart, refreshCart, clearCart, updateItem, removeItem } = useCart();
 
   // Guest inputs
   const [guestName, setGuestName] = useState('');
@@ -335,6 +340,121 @@ export default function CheckoutPage() {
               {errorMessage}
             </div>
           )}
+
+          {/* SECTION: RINGKASAN MENU PESANAN */}
+          <Card padding="md" style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Store size={18} color="var(--color-primary-500)" />
+                <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-ink-900)' }}>
+                  {cart.tenantName}
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: 'var(--color-primary-600)',
+                  backgroundColor: 'var(--color-primary-50)',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                {cart.itemCount} Item
+              </span>
+            </div>
+
+            {/* List Item Keranjang */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              {cart.items.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.6rem 0.75rem',
+                    backgroundColor: 'var(--color-bg)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0, marginRight: '0.5rem' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-ink-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.name}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-primary-600)', fontWeight: 700 }}>
+                      {formatRupiah(item.price)}
+                    </div>
+                    {item.notes && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--color-ink-400)', fontStyle: 'italic' }}>
+                        Catatan: &ldquo;{item.notes}&rdquo;
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stepper Jumlah Item */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => (item.quantity === 1 ? removeItem(item.id) : updateItem(item.id, item.quantity - 1))}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: 'var(--color-surface)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {item.quantity === 1 ? <Trash2 size={13} color="#EF4444" /> : <Minus size={13} />}
+                    </button>
+
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, width: '20px', textAlign: 'center' }}>
+                      {item.quantity}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => updateItem(item.id, item.quantity + 1)}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: 'var(--color-surface)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Rincian Harga Ringkas */}
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px dashed var(--color-border)', display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-ink-600)' }}>
+                <span>Subtotal Menu</span>
+                <span className="tabular-nums" style={{ fontWeight: 600 }}>{formatRupiah(cart.subtotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-ink-600)' }}>
+                <span>Biaya Layanan Platform</span>
+                <span className="tabular-nums" style={{ fontWeight: 600 }}>{formatRupiah(cart.fee)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-ink-900)', fontWeight: 800, fontSize: '0.9rem', paddingTop: '0.25rem' }}>
+                <span>Total Sementara</span>
+                <span className="tabular-nums" style={{ color: 'var(--color-primary-600)' }}>{formatRupiah(cart.total)}</span>
+              </div>
+            </div>
+          </Card>
 
           {/* SECTION: DATA PEMESAN */}
           <Card padding="lg" style={{ marginBottom: '1.5rem', border: '1px solid var(--color-primary-200)', background: 'linear-gradient(180deg, rgba(240, 89, 42, 0.03) 0%, #FFFFFF 100%)' }}>

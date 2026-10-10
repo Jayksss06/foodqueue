@@ -130,7 +130,7 @@ export function Navbar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {/* Cart Icon */}
           <Link
-            href="/cart"
+            href="/checkout"
             style={{
               position: 'relative',
               padding: '0.5rem',

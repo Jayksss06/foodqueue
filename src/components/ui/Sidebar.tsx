@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -18,11 +18,14 @@ import {
   Globe2,
   LogOut,
   QrCode,
+  Menu as MenuIcon,
+  X,
 } from 'lucide-react';
 
 export function Sidebar({ role }: { role: 'TENANT' | 'ADMIN' }) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const tenantNav = [
     { label: 'Dashboard', href: '/tenant', icon: LayoutDashboard },
@@ -47,46 +50,96 @@ export function Sidebar({ role }: { role: 'TENANT' | 'ADMIN' }) {
   const items = role === 'TENANT' ? tenantNav : adminNav;
 
   return (
-    <aside
-      style={{
-        width: '240px',
-        backgroundColor: '#1C1917',
-        color: '#FAF8F5',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '1.25rem 0.875rem',
-        minHeight: '100vh',
-        position: 'sticky',
-        top: 0,
-        flexShrink: 0,
-      }}
-    >
-      <div>
-        {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.75rem', marginBottom: '1.5rem' }}>
-          <div
+    <>
+      {/* Mobile Top Bar for Merchant/Admin */}
+      <div className="merchant-mobile-bar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
             style={{
-              width: '34px',
-              height: '34px',
+              padding: '0.45rem',
+              color: '#FAF8F5',
+              backgroundColor: '#2E2A27',
               borderRadius: 'var(--radius-md)',
-              background: 'var(--gradient-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#FFFFFF',
+              cursor: 'pointer',
             }}
+            aria-label="Buka Menu Pengelola"
           >
-            {role === 'TENANT' ? <UtensilsCrossed size={18} /> : <ShieldCheck size={18} />}
+            <MenuIcon size={20} />
+          </button>
+          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#FAF8F5' }}>
+            {role === 'TENANT' ? 'Portal Merchant' : 'Admin Platform'}
           </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: 1.1 }}>
-              Food<span style={{ color: 'var(--color-primary-500)' }}>Queue</span>
+        </div>
+
+        <Link
+          href="/home"
+          style={{
+            fontSize: '0.78rem',
+            color: 'var(--color-primary-400)',
+            fontWeight: 700,
+          }}
+        >
+          Lihat Web
+        </Link>
+      </div>
+
+      {/* Backdrop for mobile drawer */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="sidebar-backdrop"
+        />
+      )}
+
+      <aside className={`merchant-sidebar ${mobileOpen ? 'open' : ''}`}>
+      <div>
+        {/* Brand & Mobile Close Button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--gradient-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+              }}
+            >
+              {role === 'TENANT' ? <UtensilsCrossed size={18} /> : <ShieldCheck size={18} />}
             </div>
-            <div style={{ fontSize: '0.72rem', color: '#A8A29E', fontWeight: 600 }}>
-              {role === 'TENANT' ? 'Portal Merchant' : 'Admin Platform'}
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: 1.1 }}>
+                Food<span style={{ color: 'var(--color-primary-500)' }}>Queue</span>
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#A8A29E', fontWeight: 600 }}>
+                {role === 'TENANT' ? 'Portal Merchant' : 'Admin Platform'}
+              </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="mobile-close-btn"
+            style={{
+              padding: '0.35rem',
+              color: '#A8A29E',
+              backgroundColor: 'transparent',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+            }}
+            aria-label="Tutup Menu"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Links */}
@@ -102,6 +155,7 @@ export function Sidebar({ role }: { role: 'TENANT' | 'ADMIN' }) {
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={() => setMobileOpen(false)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -149,6 +203,73 @@ export function Sidebar({ role }: { role: 'TENANT' | 'ADMIN' }) {
           <LogOut size={16} /> Keluar
         </button>
       </div>
+
+      <style jsx>{`
+        .merchant-mobile-bar {
+          display: none;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.75rem 1rem;
+          background-color: #1c1917;
+          border-bottom: 1px solid #2e2a27;
+          position: sticky;
+          top: 0;
+          z-index: 35;
+        }
+
+        .merchant-sidebar {
+          width: 240px;
+          background-color: #1c1917;
+          color: #faf8f5;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 1.25rem 0.875rem;
+          min-height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+          transition: transform 0.25s ease;
+          z-index: 50;
+        }
+
+        .sidebar-backdrop {
+          position: fixed;
+          inset: 0;
+          background-color: rgba(0, 0, 0, 0.6);
+          z-index: 45;
+          backdrop-filter: blur(2px);
+        }
+
+        .mobile-close-btn {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .merchant-mobile-bar {
+            display: flex;
+          }
+
+          .mobile-close-btn {
+            display: flex;
+          }
+
+          .merchant-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            height: 100%;
+            transform: translateX(-100%);
+            box-shadow: var(--shadow-xl);
+          }
+
+          .merchant-sidebar.open {
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </aside>
+    </>
   );
 }

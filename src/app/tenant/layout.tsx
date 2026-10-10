@@ -35,11 +35,19 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-bg-light)' }}>
+    <div className="tenant-portal-wrapper" style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-bg-light)' }}>
       <Sidebar role="TENANT" />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowX: 'hidden' }}>
         {children}
       </div>
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .tenant-portal-wrapper {
+            flex-direction: column !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

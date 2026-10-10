@@ -3,10 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, ClipboardList, User } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { Home, Search, ClipboardList, ShoppingBag } from 'lucide-react';
 
 export function BottomNav() {
   const pathname = usePathname() || '';
+  const { cart } = useCart();
+  const cartItemCount = cart?.itemCount || 0;
 
   // Jangan tampilkan di halaman tenant dashboard atau admin panel
   if (pathname.startsWith('/tenant') || pathname.startsWith('/admin')) {
@@ -14,10 +17,10 @@ export function BottomNav() {
   }
 
   const items = [
-    { label: 'Beranda', href: '/home', icon: Home },
-    { label: 'Cari Stan', href: '/tenants', icon: Search },
-    { label: 'Pesanan', href: '/orders', icon: ClipboardList },
-    { label: 'Profil', href: '/profile', icon: User },
+    { label: 'Beranda', href: '/home', icon: Home, badge: 0 },
+    { label: 'Cari Stan', href: '/tenants', icon: Search, badge: 0 },
+    { label: 'Keranjang', href: '/checkout', icon: ShoppingBag, badge: cartItemCount },
+    { label: 'Pesanan', href: '/orders', icon: ClipboardList, badge: 0 },
   ];
 
   return (
@@ -52,6 +55,7 @@ export function BottomNav() {
             key={item.label}
             href={item.href}
             style={{
+              position: 'relative',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -65,7 +69,31 @@ export function BottomNav() {
               transition: 'all var(--transition-fast)',
             }}
           >
-            <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+            <div style={{ position: 'relative' }}>
+              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              {item.badge > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-7px',
+                    backgroundColor: 'var(--color-primary-500)',
+                    color: '#FFFFFF',
+                    fontSize: '0.625rem',
+                    fontWeight: 800,
+                    width: '15px',
+                    height: '15px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1.5px solid #FFFFFF',
+                  }}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </div>
             <span>{item.label}</span>
           </Link>
         );

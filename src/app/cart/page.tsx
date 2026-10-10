@@ -14,6 +14,12 @@ export default function CartPage() {
   const { cart, loading, updateItem, removeItem, clearCart } = useCart();
   const router = useRouter();
 
+  React.useEffect(() => {
+    if (!loading && cart && cart.items.length > 0) {
+      router.replace('/checkout');
+    }
+  }, [loading, cart, router]);
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)' }}>
