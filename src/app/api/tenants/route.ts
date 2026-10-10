@@ -23,13 +23,18 @@ export async function GET(req: NextRequest) {
     }
 
     if (category) {
-      where.menus = {
-        some: {
-          category: { slug: category },
-          deletedAt: null,
-          status: 'AVAILABLE',
+      where.OR = [
+        { tenantCategory: { slug: category } },
+        {
+          menus: {
+            some: {
+              category: { slug: category },
+              deletedAt: null,
+              status: 'AVAILABLE',
+            },
+          },
         },
-      };
+      ];
     }
 
     if (openNow) {
@@ -40,6 +45,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         operatingHours: true,
+        tenantCategory: true,
         _count: {
           select: { menus: { where: { deletedAt: null, status: 'AVAILABLE' } } },
         },

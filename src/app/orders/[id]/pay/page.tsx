@@ -351,7 +351,7 @@ function OrderPayContent({ orderId }: { orderId: string }) {
             style={{ width: '100%', backgroundColor: 'var(--color-secondary-500)' }}
             icon={<CheckCircle2 size={18} />}
           >
-            ⚡ Simulasikan Pembayaran Sukses
+            Simulasikan Pembayaran Sukses
           </Button>
 
           <Button

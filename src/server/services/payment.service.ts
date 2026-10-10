@@ -152,7 +152,7 @@ export class PaymentService {
       // 4. Kirim notifikasi ke Tenant
       await NotificationService.createNotification(
         order.tenant.ownerId,
-        'Pesanan Baru Masuk! 🔔',
+        'Pesanan Baru Masuk!',
         `Pesanan #${order.orderNumber} telah dibayar (${order.total.toLocaleString('id-ID')}). Harap segera konfirmasi.`,
         'ORDER',
         `/tenant/orders/${order.id}`

@@ -86,7 +86,7 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
     PAID: { label: 'Dibayar · Antre Dapur', variant: 'warning' },
     ACCEPTED: { label: 'Diterima Tenant', variant: 'info' },
     PREPARING: { label: 'Sedang Dimasak', variant: 'info' },
-    READY_FOR_PICKUP: { label: 'Siap Diambil 🎉', variant: 'success' },
+    READY_FOR_PICKUP: { label: 'Siap Diambil', variant: 'success' },
     COMPLETED: { label: 'Selesai', variant: 'neutral' },
     CANCELLED: { label: 'Dibatalkan', variant: 'danger' },
     REJECTED: { label: 'Ditolak (Refund)', variant: 'danger' },

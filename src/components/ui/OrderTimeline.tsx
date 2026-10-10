@@ -49,7 +49,7 @@ export function OrderTimeline({
     { key: 'PAID', label: 'Pembayaran Berhasil', icon: <Check size={16} /> },
     { key: 'ACCEPTED', label: 'Diterima Tenant', icon: <Utensils size={16} /> },
     { key: 'PREPARING', label: 'Sedang Dimasak', icon: <Utensils size={16} /> },
-    { key: 'READY_FOR_PICKUP', label: 'Siap Diambil 🎉', icon: <Sparkles size={16} /> },
+    { key: 'READY_FOR_PICKUP', label: 'Siap Diambil', icon: <Sparkles size={16} /> },
     { key: 'COMPLETED', label: 'Selesai', icon: <Check size={16} /> },
   ];
 

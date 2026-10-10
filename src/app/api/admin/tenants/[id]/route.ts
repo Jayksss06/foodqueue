@@ -38,7 +38,7 @@ export const PATCH = withAuth(
       if (validated.status === 'ACTIVE') {
         await NotificationService.createNotification(
           tenant.ownerId,
-          'Toko Anda Telah Diverifikasi! 🎉',
+          'Toko Anda Telah Diverifikasi!',
           `Selamat! Toko ${tenant.name} telah disetujui oleh admin dan kini dapat menerima pesanan.`,
           'SYSTEM',
           '/tenant'

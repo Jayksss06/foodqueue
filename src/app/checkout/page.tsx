@@ -305,7 +305,7 @@ export default function CheckoutPage() {
                 gap: '0.25rem',
               }}
             >
-              ✓ Keranjang
+              1. Keranjang
             </span>
             <span style={{ color: 'var(--color-border)' }}>•</span>
             <span

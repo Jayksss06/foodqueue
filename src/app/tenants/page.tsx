@@ -20,7 +20,7 @@ function TenantsContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/categories')
+    fetch('/api/tenant-categories')
       .then((r) => r.json())
       .then((j) => setCategories(j.data || []))
       .catch(console.error);
@@ -176,12 +176,17 @@ function TenantsContent() {
                         {t.description || t.location}
                       </p>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--color-ink-400)', fontWeight: 600 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                        {t.tenantCategory && (
+                          <Badge variant="neutral" size="sm">
+                            {t.tenantCategory.name}
+                          </Badge>
+                        )}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--color-ink-400)', fontWeight: 600 }}>
                           <Clock size={13} /> Siap ~{t.defaultPreparationTime} mnt
                         </span>
-                        <span>•</span>
-                        <span>{t.location}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-ink-400)' }}>•</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-ink-400)' }}>{t.location}</span>
                       </div>
                     </div>
                   </Card>

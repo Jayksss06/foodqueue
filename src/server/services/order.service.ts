@@ -402,19 +402,19 @@ export class OrderService {
       let notificationMsg = `Pesanan #${order.orderNumber} Anda diperbarui menjadi ${targetStatus}.`;
 
       if (targetStatus === 'ACCEPTED') {
-        notificationTitle = 'Pesanan Diterima! 👨‍🍳';
+        notificationTitle = 'Pesanan Diterima!';
         notificationMsg = `Tenant ${order.tenant.name} telah menerima pesanan Anda dan segera memprosesnya.`;
       } else if (targetStatus === 'PREPARING') {
-        notificationTitle = 'Makanan Sedang Disiapkan 🍳';
+        notificationTitle = 'Makanan Sedang Disiapkan';
         notificationMsg = `Pesanan #${order.orderNumber} sedang dimasak oleh tenant.`;
       } else if (targetStatus === 'READY_FOR_PICKUP') {
-        notificationTitle = 'Makanan Siap Diambil! 🎉';
+        notificationTitle = 'Makanan Siap Diambil!';
         notificationMsg = `Pesanan Anda di ${order.tenant.name} sudah siap! Tunjukkan QR Code pada jam pengambilan.`;
       } else if (targetStatus === 'COMPLETED') {
-        notificationTitle = 'Pesanan Selesai ✨';
+        notificationTitle = 'Pesanan Selesai';
         notificationMsg = `Terima kasih! Jangan lupa beri ulasan untuk pesanan #${order.orderNumber}.`;
       } else if (targetStatus === 'REJECTED') {
-        notificationTitle = 'Pesanan Ditolak ⚠️';
+        notificationTitle = 'Pesanan Ditolak';
         notificationMsg = `Pesanan #${order.orderNumber} tidak dapat diproses: ${note || 'Dapur sedang penuh'}. Dana Anda dikembalikan.`;
       }
 

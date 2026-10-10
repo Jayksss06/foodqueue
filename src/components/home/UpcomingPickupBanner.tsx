@@ -114,12 +114,12 @@ export function UpcomingPickupBanner({ initialOrder }: { initialOrder?: any }) {
               }}
             >
               {isReady
-                ? 'Siap Diambil 🎉'
+                ? 'Siap Diambil'
                 : isPrep
-                ? 'Sedang Dimasak 🍳'
+                ? 'Sedang Dimasak'
                 : isAccepted
-                ? 'Diterima Stan 👨‍🍳'
-                : 'Menunggu Pembayaran ⏳'}
+                ? 'Diterima Stan'
+                : 'Menunggu Pembayaran'}
             </span>
           </div>
 

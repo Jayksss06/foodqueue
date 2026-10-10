@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Memulai proses seeding data realistis FoodQueue...');
+  console.log('[SEED] Memulai proses seeding data realistis FoodQueue...');
 
   // 1. Bersihkan data lama jika ada
   await prisma.review.deleteMany();
@@ -536,7 +536,7 @@ async function main() {
     update: { lastValue: 125 },
   });
 
-  console.log('✅ Seeding berhasil diselesaikan!');
+  console.log('[SUCCESS] Seeding berhasil diselesaikan!');
   console.log('----------------------------------------------------');
   console.log('Akun Demo:');
   console.log('1. Admin: admin@foodqueue.id | Password: Admin123!');
@@ -548,7 +548,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error('❌ Gagal melakukan seeding:', e);
+    console.error('[ERROR] Gagal melakukan seeding:', e);
     process.exit(1);
   })
   .finally(async () => {

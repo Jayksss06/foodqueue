@@ -125,17 +125,31 @@ model Tenant {
   createdAt              DateTime     @default(now()) @map("created_at")
   updatedAt              DateTime     @updatedAt @map("updated_at")
 
-  owner          User                  @relation(fields: [ownerId], references: [id])
-  venue          Venue                 @relation(fields: [venueId], references: [id])
-  operatingHours TenantOperatingHour[]
-  menus          Menu[]
-  pickupSlots    PickupSlot[]
-  orders         Order[]
-  reviews        Review[]
-  carts          Cart[]
+  tenantCategoryId       String?               @map("tenant_category_id")
+  tenantCategory         TenantCategory?       @relation(fields: [tenantCategoryId], references: [id])
+  owner                  User                  @relation(fields: [ownerId], references: [id])
+  venue                  Venue                 @relation(fields: [venueId], references: [id])
+  operatingHours         TenantOperatingHour[]
+  menus                  Menu[]
+  pickupSlots            PickupSlot[]
+  orders                 Order[]
+  reviews                Review[]
+  carts                  Cart[]
 
   @@index([status])
+  @@index([tenantCategoryId])
   @@map("tenants")
+}
+
+model TenantCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  tenants     Tenant[]
+
+  @@map("tenant_categories")
 }
 
 model TenantOperatingHour {

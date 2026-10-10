@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Leaf,
   Users,
+  Star,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -347,8 +348,8 @@ export default async function LandingPage() {
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
                           {t.name}
                         </h3>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#D97706' }}>
-                          ★ {t.ratingAvg.toFixed(1)}
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#D97706', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                          <Star size={14} fill="#D97706" color="#D97706" /> {t.ratingAvg.toFixed(1)}
                         </span>
                       </div>
 

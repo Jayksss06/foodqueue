@@ -160,7 +160,7 @@ export default function LoginPage() {
                 cursor: 'pointer',
               }}
             >
-              🏪 Tenant 1: Bu Sari
+              Tenant 1: Bu Sari
             </button>
 
             <button
@@ -177,7 +177,7 @@ export default function LoginPage() {
                 cursor: 'pointer',
               }}
             >
-              🏪 Tenant 2: Mas Dimas
+              Tenant 2: Mas Dimas
             </button>
 
             <button
@@ -194,7 +194,7 @@ export default function LoginPage() {
                 cursor: 'pointer',
               }}
             >
-              🛡️ Admin: Budi
+              Admin: Budi
             </button>
           </div>
         </div>

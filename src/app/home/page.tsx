@@ -16,6 +16,7 @@ import {
   UtensilsCrossed,
   Sparkles,
   ShoppingBag,
+  Star,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -47,8 +48,8 @@ export default async function CustomerHomePage() {
       });
     }
 
-    // 2. Ambil categories
-    categories = await prisma.category.findMany({
+    // 2. Ambil tenant categories
+    categories = await prisma.tenantCategory.findMany({
       orderBy: { name: 'asc' },
       take: 8,
     });
@@ -57,6 +58,7 @@ export default async function CustomerHomePage() {
     tenants = await prisma.tenant.findMany({
       where: { status: 'ACTIVE' },
       include: {
+        tenantCategory: true,
         menus: {
           where: { deletedAt: null, status: 'AVAILABLE' },
           take: 2,
@@ -83,7 +85,7 @@ export default async function CustomerHomePage() {
             }}
           >
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-ink-900)' }}>
-              Halo, {session ? session.name.split(' ')[0] : 'Kawan Kampus'} 👋
+              Halo, {session ? session.name.split(' ')[0] : 'Kawan Kampus'}
             </h1>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-500)', marginTop: '0.2rem' }}>
               Mau santap apa di kantin hari ini?
@@ -188,8 +190,8 @@ export default async function CustomerHomePage() {
                           <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-ink-900)' }}>
                             {t.name}
                           </h3>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#D97706' }}>
-                            ★ {t.ratingAvg.toFixed(1)}
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#D97706', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                            <Star size={14} fill="#D97706" color="#D97706" /> {t.ratingAvg.toFixed(1)}
                           </span>
                         </div>
 
@@ -197,7 +199,12 @@ export default async function CustomerHomePage() {
                           {t.location}
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                          {t.tenantCategory && (
+                            <Badge variant="neutral" size="sm">
+                              {t.tenantCategory.name}
+                            </Badge>
+                          )}
                           <Badge variant="success" size="sm">Buka · Slot Tersedia</Badge>
                           <span style={{ fontSize: '0.75rem', color: 'var(--color-ink-400)' }}>
                             Siap ~{t.defaultPreparationTime} mnt
