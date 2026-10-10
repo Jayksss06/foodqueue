@@ -78,63 +78,20 @@ export default async function CustomerHomePage() {
           {/* Greeting */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
               marginBottom: '1.25rem',
               marginTop: '0.5rem',
             }}
           >
-            <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-ink-900)' }}>
-                Halo, {session ? session.name.split(' ')[0] : 'Kawan Kampus'} 👋
-              </h1>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-500)' }}>
-                Mau santap apa di kantin hari ini?
-              </p>
-            </div>
-
-            <Link
-              href="/notifications"
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-ink-700)',
-              }}
-            >
-              <Bell size={20} />
-            </Link>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-ink-900)' }}>
+              Halo, {session ? session.name.split(' ')[0] : 'Kawan Kampus'} 👋
+            </h1>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-500)', marginTop: '0.2rem' }}>
+              Mau santap apa di kantin hari ini?
+            </p>
           </div>
 
-          {/* UPCOMING PICKUP CARD (Supports Guest & Logged-in Orders) */}
+          {/* UPCOMING PICKUP CARD (Hanya muncul jika ada pesanan aktif) */}
           <UpcomingPickupBanner initialOrder={activeOrder} />
-
-          {/* Search Bar Input */}
-          <Link href="/tenants" style={{ display: 'block', marginBottom: '1.25rem' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1rem',
-                backgroundColor: 'var(--color-surface)',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-ink-400)',
-                fontSize: '0.9rem',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
-              <Search size={18} />
-              <span>Cari makanan atau tenant...</span>
-            </div>
-          </Link>
 
           {/* Category Chips Bar */}
           <div

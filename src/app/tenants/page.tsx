@@ -1,17 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
 import { BottomNav } from '@/components/ui/BottomNav';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Search, Clock, UtensilsCrossed, Star } from 'lucide-react';
 
-export default function TenantsPage() {
+function TenantsContent() {
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams?.get('category') || null;
+
   const [tenants, setTenants] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -25,6 +29,9 @@ export default function TenantsPage() {
   useEffect(() => {
     setLoading(true);
     let url = `/api/tenants?q=${encodeURIComponent(searchQuery)}`;
+    if (selectedCategory) {
+      url += `&category=${encodeURIComponent(selectedCategory)}`;
+    }
     fetch(url)
       .then((r) => r.json())
       .then((j) => {
@@ -32,7 +39,7 @@ export default function TenantsPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategory]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>
@@ -187,5 +194,19 @@ export default function TenantsPage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+export default function TenantsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: 'var(--color-ink-400)' }}>Memuat stan kantin...</p>
+        </div>
+      }
+    >
+      <TenantsContent />
+    </Suspense>
   );
 }

@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q')?.trim() || '';
+    const category = searchParams.get('category')?.trim() || '';
     const openNow = searchParams.get('openNow') === 'true';
 
     const where: any = {
@@ -19,6 +20,16 @@ export async function GET(req: NextRequest) {
         { description: { contains: q, mode: 'insensitive' } },
         { location: { contains: q, mode: 'insensitive' } },
       ];
+    }
+
+    if (category) {
+      where.menus = {
+        some: {
+          category: { slug: category },
+          deletedAt: null,
+          status: 'AVAILABLE',
+        },
+      };
     }
 
     if (openNow) {

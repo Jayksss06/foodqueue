@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { ShoppingBag, Bell, UtensilsCrossed, ShieldCheck, LogIn, User as UserIcon, Store } from 'lucide-react';
@@ -9,6 +10,11 @@ import { ShoppingBag, Bell, UtensilsCrossed, ShieldCheck, LogIn, User as UserIco
 export function Navbar() {
   const { user } = useAuth();
   const { cart } = useCart();
+  const pathname = usePathname() || '';
+
+  const isHomeActive = pathname === '/home' || pathname === '/';
+  const isTenantsActive = pathname.startsWith('/tenants');
+  const isOrdersActive = pathname.startsWith('/orders');
 
   return (
     <header className="glass-header" style={{ position: 'sticky', top: 0, zIndex: 40, width: '100%' }}>
@@ -21,8 +27,8 @@ export function Navbar() {
           height: '64px',
         }}
       >
-        {/* Brand Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Brand Logo - Navigates directly to active app home */}
+        <Link href="/home" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div
             style={{
               width: '36px',
@@ -54,23 +60,51 @@ export function Navbar() {
           }}
           className="desktop-links"
         >
-          <Link href="/home" style={{ color: 'var(--color-ink-700)', transition: 'color var(--transition-fast)' }}>
-            Home
+          <Link
+            href="/home"
+            style={{
+              color: isHomeActive ? 'var(--color-primary-500)' : 'var(--color-ink-700)',
+              fontWeight: isHomeActive ? 750 : 600,
+              transition: 'color var(--transition-fast)',
+              borderBottom: isHomeActive ? '2px solid var(--color-primary-500)' : '2px solid transparent',
+              paddingBottom: '2px',
+            }}
+          >
+            Beranda
           </Link>
-          <Link href="/tenants" style={{ color: 'var(--color-ink-700)', transition: 'color var(--transition-fast)' }}>
-            Daftar Tenant
+          <Link
+            href="/tenants"
+            style={{
+              color: isTenantsActive ? 'var(--color-primary-500)' : 'var(--color-ink-700)',
+              fontWeight: isTenantsActive ? 750 : 600,
+              transition: 'color var(--transition-fast)',
+              borderBottom: isTenantsActive ? '2px solid var(--color-primary-500)' : '2px solid transparent',
+              paddingBottom: '2px',
+            }}
+          >
+            Cari Stan
           </Link>
-          <Link href="/orders" style={{ color: 'var(--color-ink-700)', transition: 'color var(--transition-fast)' }}>
+          <Link
+            href="/orders"
+            style={{
+              color: isOrdersActive ? 'var(--color-primary-500)' : 'var(--color-ink-700)',
+              fontWeight: isOrdersActive ? 750 : 600,
+              transition: 'color var(--transition-fast)',
+              borderBottom: isOrdersActive ? '2px solid var(--color-primary-500)' : '2px solid transparent',
+              paddingBottom: '2px',
+            }}
+          >
             Pesanan Saya
           </Link>
           {user?.role === 'TENANT' && (
             <Link
               href="/tenant"
               style={{
-                color: 'var(--color-primary-600)',
+                color: pathname.startsWith('/tenant') ? 'var(--color-primary-500)' : 'var(--color-primary-600)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.35rem',
+                fontWeight: 700,
               }}
             >
               <UtensilsCrossed size={16} /> Portal Tenant
@@ -84,6 +118,7 @@ export function Navbar() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.35rem',
+                fontWeight: 700,
               }}
             >
               <ShieldCheck size={16} /> Panel Admin

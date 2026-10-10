@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Home, Search, ClipboardList, User } from 'lucide-react';
 
 export function BottomNav() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
 
   // Jangan tampilkan di halaman tenant dashboard atau admin panel
   if (pathname.startsWith('/tenant') || pathname.startsWith('/admin')) {

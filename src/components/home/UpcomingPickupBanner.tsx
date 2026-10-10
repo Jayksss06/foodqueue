@@ -155,43 +155,6 @@ export function UpcomingPickupBanner({ initialOrder }: { initialOrder?: any }) {
     );
   }
 
-  // Default Banner jika tidak ada pesanan aktif
-  return (
-    <div
-      style={{
-        background: 'linear-gradient(135deg, #1C1917 0%, #292524 100%)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '1.25rem 1.5rem',
-        color: '#FFFFFF',
-        marginBottom: '1.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}
-    >
-      <div>
-        <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>Pesan Makanan Lebih Awal</div>
-        <div style={{ fontSize: '0.8rem', color: '#A8A29E', marginTop: '0.2rem' }}>
-          Tentukan jam ambil, tanpa buang waktu mengantre
-        </div>
-      </div>
-      <Link
-        href="/tenants"
-        style={{
-          padding: '0.5rem 1rem',
-          borderRadius: 'var(--radius-md)',
-          backgroundColor: 'var(--color-primary-500)',
-          color: '#FFFFFF',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.35rem',
-          textDecoration: 'none',
-        }}
-      >
-        Pesan <ArrowRight size={16} />
-      </Link>
-    </div>
-  );
+  // Jika tidak ada pesanan aktif yang perlu dipantau, jangan tampilkan banner apa pun
+  return null;
 }
