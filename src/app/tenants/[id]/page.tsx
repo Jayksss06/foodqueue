@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, useMemo, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
@@ -20,6 +20,8 @@ import {
   ShoppingBag,
   ArrowRight,
   AlertTriangle,
+  Search,
+  X,
 } from 'lucide-react';
 
 export default function TenantDetailPage({
@@ -34,6 +36,10 @@ export default function TenantDetailPage({
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // State filter kategori menu & pencarian hidangan
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   // State untuk modal tambah menu
   const [selectedMenu, setSelectedMenu] = useState<any | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -42,6 +48,41 @@ export default function TenantDetailPage({
 
   // State untuk dialog konflik tenant (BR-05)
   const [showConflictDialog, setShowConflictDialog] = useState(false);
+
+  // Ekstrak daftar kategori unik dari menu tenant
+  const categories = useMemo(() => {
+    if (!tenant?.menus) return [];
+    const map = new Map<string, { id: string; name: string; count: number }>();
+    tenant.menus.forEach((m: any) => {
+      const catId = m.category?.id || 'other';
+      const catName = m.category?.name || 'Lainnya';
+      const existing = map.get(catId);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(catId, { id: catId, name: catName, count: 1 });
+      }
+    });
+    return Array.from(map.values());
+  }, [tenant?.menus]);
+
+  // Filter menu berdasarkan kategori aktif dan kata kunci pencarian
+  const filteredMenus = useMemo(() => {
+    if (!tenant?.menus) return [];
+    return tenant.menus.filter((m: any) => {
+      if (selectedCategory) {
+        const mCatId = m.category?.id || 'other';
+        if (mCatId !== selectedCategory) return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = m.name?.toLowerCase().includes(q);
+        const matchDesc = m.description?.toLowerCase().includes(q);
+        if (!matchName && !matchDesc) return false;
+      }
+      return true;
+    });
+  }, [tenant?.menus, selectedCategory, searchQuery]);
 
   useEffect(() => {
     fetch(`/api/tenants/${id}`)
@@ -232,87 +273,282 @@ export default function TenantDetailPage({
           </div>
         </div>
 
-        {/* Menu Catalog Section: 2 Kolom Makanan di Browser HP */}
+        {/* Menu Catalog Section: Kategori Menu, Pencarian & 2 Kolom Makanan */}
         <div className="container" style={{ maxWidth: '960px', marginTop: '1.25rem', padding: '0 0.85rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+          {/* Header Section */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <h2 style={{ fontSize: '1.15rem', fontWeight: 850, color: 'var(--color-ink-900)' }}>
               Daftar Menu
             </h2>
             <span style={{ fontSize: '0.8rem', color: 'var(--color-ink-400)', fontWeight: 600 }}>
-              {tenant.menus?.length || 0} Hidangan
+              {filteredMenus.length} dari {tenant.menus?.length || 0} Hidangan
             </span>
           </div>
 
-          {/* 2-COLUMN FOOD GRID ON MOBILE */}
-          <div className="menu-two-column-grid">
-            {tenant.menus.map((menu: any) => {
-              const isAvailable = menu.status === 'AVAILABLE' && menu.stock > 0;
+          {/* Pencarian Cepat di Stan Ini */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.85rem',
+              backgroundColor: 'var(--color-surface)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-border)',
+              marginBottom: '0.75rem',
+            }}
+          >
+            <Search size={16} color="var(--color-ink-400)" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari makanan atau minuman di stan ini..."
+              style={{
+                border: 'none',
+                outline: 'none',
+                width: '100%',
+                fontSize: '0.875rem',
+                backgroundColor: 'transparent',
+                color: 'var(--color-ink-900)',
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--color-ink-400)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0.2rem',
+                }}
+                aria-label="Hapus kata kunci pencarian"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
 
-              return (
-                <div key={menu.id} className="food-menu-card">
-                  {/* Gambar Menu */}
-                  <div className="food-image-wrapper">
-                    {menu.imageUrl ? (
-                      <img
-                        src={menu.imageUrl}
-                        alt={menu.name}
-                        className="food-img"
-                      />
-                    ) : (
-                      <div className="food-img-fallback">
-                        <UtensilsCrossed size={30} color="#A8A29E" />
-                      </div>
-                    )}
+          {/* Kategori Menu Pills (Makanan, Minuman, Camilan, dll.) */}
+          {categories.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.45rem',
+                overflowX: 'auto',
+                paddingBottom: '0.65rem',
+                marginBottom: '1rem',
+                scrollbarWidth: 'none',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(null)}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: selectedCategory === null ? 'var(--color-primary-500)' : 'var(--color-surface)',
+                  color: selectedCategory === null ? '#FFFFFF' : 'var(--color-ink-700)',
+                  border: selectedCategory === null ? 'none' : '1px solid var(--color-border)',
+                  fontWeight: 650,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all var(--transition-fast)',
+                }}
+              >
+                <span>Semua Menu</span>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    padding: '0.1rem 0.35rem',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: selectedCategory === null ? 'rgba(255,255,255,0.25)' : 'var(--color-bg)',
+                    color: selectedCategory === null ? '#FFFFFF' : 'var(--color-ink-500)',
+                  }}
+                >
+                  {tenant.menus?.length || 0}
+                </span>
+              </button>
 
-                    {/* Stock Alert Pill */}
-                    {isAvailable && menu.stock <= 5 && (
-                      <span className="stock-badge">
-                        Sisa {menu.stock}
-                      </span>
-                    )}
+              {categories.map((c) => {
+                const isSelected = selectedCategory === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(isSelected ? null : c.id)}
+                    style={{
+                      padding: '0.4rem 0.85rem',
+                      borderRadius: 'var(--radius-full)',
+                      backgroundColor: isSelected ? 'var(--color-primary-500)' : 'var(--color-surface)',
+                      color: isSelected ? '#FFFFFF' : 'var(--color-ink-700)',
+                      border: isSelected ? 'none' : '1px solid var(--color-border)',
+                      fontWeight: 650,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      transition: 'all var(--transition-fast)',
+                    }}
+                  >
+                    <span>{c.name}</span>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: 'var(--radius-full)',
+                        backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--color-bg)',
+                        color: isSelected ? '#FFFFFF' : 'var(--color-ink-500)',
+                      }}
+                    >
+                      {c.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-                    {/* Sold out overlay */}
-                    {!isAvailable && (
-                      <div className="soldout-overlay">
-                        Habis
-                      </div>
-                    )}
-                  </div>
+          {/* Tampilan Ketika Tidak Ada Menu yang Cocok */}
+          {filteredMenus.length === 0 ? (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '3.5rem 1rem',
+                backgroundColor: 'var(--color-surface)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--color-border)',
+              }}
+            >
+              <UtensilsCrossed size={36} style={{ margin: '0 auto 0.75rem auto', color: 'var(--color-ink-300)' }} />
+              <div style={{ fontWeight: 750, color: 'var(--color-ink-800)', fontSize: '0.95rem' }}>
+                Tidak ada menu yang sesuai
+              </div>
+              <p
+                style={{
+                  fontSize: '0.825rem',
+                  color: 'var(--color-ink-400)',
+                  marginTop: '0.25rem',
+                  maxWidth: '320px',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                  marginBottom: '1rem',
+                }}
+              >
+                Coba pilih kategori menu lain atau ubah kata kunci pencarian Anda.
+              </p>
+              {(selectedCategory !== null || searchQuery !== '') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setSearchQuery('');
+                  }}
+                >
+                  Tampilkan Semua Menu
+                </Button>
+              )}
+            </div>
+          ) : (
+            /* 2-COLUMN FOOD GRID ON MOBILE */
+            <div className="menu-two-column-grid">
+              {filteredMenus.map((menu: any) => {
+                const isAvailable = menu.status === 'AVAILABLE' && menu.stock > 0;
 
-                  {/* Body Card */}
-                  <div className="food-card-body">
-                    <div>
-                      <h3 className="food-title" title={menu.name}>
-                        {menu.name}
-                      </h3>
-                      {menu.description && (
-                        <p className="food-desc">
-                          {menu.description}
-                        </p>
+                return (
+                  <div key={menu.id} className="food-menu-card">
+                    {/* Gambar Menu */}
+                    <div className="food-image-wrapper">
+                      {menu.imageUrl ? (
+                        <img
+                          src={menu.imageUrl}
+                          alt={menu.name}
+                          className="food-img"
+                        />
+                      ) : (
+                        <div className="food-img-fallback">
+                          <UtensilsCrossed size={30} color="#A8A29E" />
+                        </div>
+                      )}
+
+                      {/* Stock Alert Pill */}
+                      {isAvailable && menu.stock <= 5 && (
+                        <span className="stock-badge">
+                          Sisa {menu.stock}
+                        </span>
+                      )}
+
+                      {/* Sold out overlay */}
+                      {!isAvailable && (
+                        <div className="soldout-overlay">
+                          Habis
+                        </div>
                       )}
                     </div>
 
-                    <div className="food-bottom-row">
-                      <div className="food-price">
-                        {formatRupiah(menu.price)}
+                    {/* Body Card */}
+                    <div className="food-card-body">
+                      <div>
+                        {menu.category?.name && (
+                          <div style={{ marginBottom: '0.25rem' }}>
+                            <span
+                              style={{
+                                fontSize: '0.675rem',
+                                fontWeight: 700,
+                                color: 'var(--color-primary-600)',
+                                backgroundColor: 'var(--color-primary-50)',
+                                padding: '0.12rem 0.4rem',
+                                borderRadius: 'var(--radius-full)',
+                                display: 'inline-block',
+                              }}
+                            >
+                              {menu.category.name}
+                            </span>
+                          </div>
+                        )}
+                        <h3 className="food-title" title={menu.name}>
+                          {menu.name}
+                        </h3>
+                        {menu.description && (
+                          <p className="food-desc">
+                            {menu.description}
+                          </p>
+                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        disabled={!isAvailable}
-                        onClick={() => handleOpenAddModal(menu)}
-                        className={`add-food-btn ${!isAvailable ? 'disabled' : ''}`}
-                        aria-label={`Tambah ${menu.name}`}
-                      >
-                        <Plus size={15} strokeWidth={2.5} />
-                        <span>Tambah</span>
-                      </button>
+                      <div className="food-bottom-row">
+                        <div className="food-price">
+                          {formatRupiah(menu.price)}
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={!isAvailable}
+                          onClick={() => handleOpenAddModal(menu)}
+                          className={`add-food-btn ${!isAvailable ? 'disabled' : ''}`}
+                          aria-label={`Tambah ${menu.name}`}
+                        >
+                          <Plus size={15} strokeWidth={2.5} />
+                          <span>Tambah</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
 

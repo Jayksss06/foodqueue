@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { Home, Search, ClipboardList, ShoppingBag } from 'lucide-react';
+import { Store, ShoppingBag, ClipboardList } from 'lucide-react';
 
 export function BottomNav() {
   const pathname = usePathname() || '';
@@ -17,8 +17,7 @@ export function BottomNav() {
   }
 
   const items = [
-    { label: 'Beranda', href: '/home', icon: Home, badge: 0 },
-    { label: 'Cari Stan', href: '/tenants', icon: Search, badge: 0 },
+    { label: 'Stan Kantin', href: '/tenants', icon: Store, badge: 0 },
     { label: 'Keranjang', href: '/checkout', icon: ShoppingBag, badge: cartItemCount },
     { label: 'Pesanan', href: '/orders', icon: ClipboardList, badge: 0 },
   ];
@@ -46,8 +45,8 @@ export function BottomNav() {
       {items.map((item) => {
         const Icon = item.icon;
         const isActive =
-          item.href === '/home'
-            ? pathname === '/home' || pathname === '/'
+          item.href === '/tenants'
+            ? pathname.startsWith('/tenants') || pathname === '/' || pathname === '/home'
             : pathname.startsWith(item.href);
 
         return (

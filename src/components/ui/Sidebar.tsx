@@ -77,7 +77,7 @@ export function Sidebar({ role }: { role: 'TENANT' | 'ADMIN' }) {
         </div>
 
         <Link
-          href="/home"
+          href="/tenants"
           style={{
             fontSize: '0.78rem',
             color: 'var(--color-primary-400)',

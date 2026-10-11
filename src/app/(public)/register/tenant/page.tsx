@@ -70,7 +70,7 @@ export default function RegisterTenantPage() {
     >
       <div style={{ width: '100%', maxWidth: '520px' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link href="/tenants" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             <div
               style={{
                 width: '40px',

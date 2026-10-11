@@ -59,7 +59,7 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: '440px' }}>
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link href="/tenants" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             <div
               style={{
                 width: '40px',
@@ -105,7 +105,7 @@ export default function LoginPage() {
             <strong>Untuk Pembeli & Mahasiswa:</strong> Anda <b>tidak perlu login</b>! Pemesanan di FoodQueue kini 100% langsung tanpa akun.
             <div style={{ marginTop: '0.35rem' }}>
               <Link
-                href="/home"
+                href="/tenants"
                 style={{
                   color: '#1D4ED8',
                   fontWeight: 700,

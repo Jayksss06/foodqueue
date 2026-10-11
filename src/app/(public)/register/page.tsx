@@ -21,7 +21,7 @@ export default function RegisterInfoPage() {
       <div style={{ width: '100%', maxWidth: '480px' }}>
         {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link href="/tenants" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             <div
               style={{
                 width: '40px',
@@ -68,7 +68,7 @@ export default function RegisterInfoPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <Link href="/home" style={{ textDecoration: 'none' }}>
+            <Link href="/tenants" style={{ textDecoration: 'none' }}>
               <Button size="lg" style={{ width: '100%' }} icon={<ArrowRight size={18} />}>
                 Mulai Pesan Makanan Sekarang
               </Button>

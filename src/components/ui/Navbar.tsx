@@ -12,8 +12,7 @@ export function Navbar() {
   const { cart } = useCart();
   const pathname = usePathname() || '';
 
-  const isHomeActive = pathname === '/home' || pathname === '/';
-  const isTenantsActive = pathname.startsWith('/tenants');
+  const isTenantsActive = pathname.startsWith('/tenants') || pathname === '/' || pathname === '/home';
   const isOrdersActive = pathname.startsWith('/orders');
 
   return (
@@ -27,8 +26,8 @@ export function Navbar() {
           height: '64px',
         }}
       >
-        {/* Brand Logo - Navigates directly to active app home */}
-        <Link href="/home" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Brand Logo - Navigates directly to active tenant catalog */}
+        <Link href="/tenants" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div
             style={{
               width: '36px',
@@ -61,18 +60,6 @@ export function Navbar() {
           className="desktop-links"
         >
           <Link
-            href="/home"
-            style={{
-              color: isHomeActive ? 'var(--color-primary-500)' : 'var(--color-ink-700)',
-              fontWeight: isHomeActive ? 750 : 600,
-              transition: 'color var(--transition-fast)',
-              borderBottom: isHomeActive ? '2px solid var(--color-primary-500)' : '2px solid transparent',
-              paddingBottom: '2px',
-            }}
-          >
-            Beranda
-          </Link>
-          <Link
             href="/tenants"
             style={{
               color: isTenantsActive ? 'var(--color-primary-500)' : 'var(--color-ink-700)',
@@ -82,7 +69,7 @@ export function Navbar() {
               paddingBottom: '2px',
             }}
           >
-            Cari Stan
+            Stan Kantin
           </Link>
           <Link
             href="/orders"
