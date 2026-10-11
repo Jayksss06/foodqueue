@@ -99,7 +99,7 @@ function OrderPayContent({ orderId }: { orderId: string }) {
     return () => clearInterval(interval);
   }, [timeLeftSeconds]);
 
-  const handleSimulatePayment = async (outcome: 'SUCCESS' | 'FAILURE') => {
+  const handleSimulatePayment = async (outcome: 'SUCCESS' | 'FAILURE', autoAdvanceToReady = false) => {
     setIsSimulating(true);
     setError(null);
 
@@ -114,6 +114,15 @@ function OrderPayContent({ orderId }: { orderId: string }) {
 
       if (!res.ok || !json.data?.success) {
         throw new Error(json.error?.message || json.data?.message || 'Simulasi pembayaran gagal.');
+      }
+
+      // Jika penguji memilih opsi langsung siap diambil
+      if (outcome === 'SUCCESS' && autoAdvanceToReady) {
+        await fetch(`/api/orders/${orderId}/simulate-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: 'READY_FOR_PICKUP', token: token || undefined }),
+        });
       }
 
       // Redirect ke status order
@@ -343,15 +352,25 @@ function OrderPayContent({ orderId }: { orderId: string }) {
           Klik tombol di bawah untuk menguji respon sistem saat pembayaran berhasil atau gagal:
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
           <Button
             size="lg"
             loading={isSimulating}
-            onClick={() => handleSimulatePayment('SUCCESS')}
+            onClick={() => handleSimulatePayment('SUCCESS', false)}
             style={{ width: '100%', backgroundColor: 'var(--color-secondary-500)' }}
             icon={<CheckCircle2 size={18} />}
           >
-            Simulasikan Pembayaran Sukses
+            Simulasikan Pembayaran Sukses (Antre Dapur)
+          </Button>
+
+          <Button
+            size="lg"
+            loading={isSimulating}
+            onClick={() => handleSimulatePayment('SUCCESS', true)}
+            style={{ width: '100%', backgroundColor: 'var(--color-primary-500)' }}
+            icon={<QrCode size={18} />}
+          >
+            Simulasikan & Langsung Siap Diambil (QR Code)
           </Button>
 
           <Button

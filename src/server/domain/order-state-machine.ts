@@ -26,37 +26,37 @@ export const ORDER_TRANSITIONS: TransitionRule[] = [
   {
     from: 'PAID',
     to: 'ACCEPTED',
-    allowedActors: ['TENANT', 'ADMIN'],
+    allowedActors: ['TENANT', 'ADMIN', 'SYSTEM'],
     description: 'Tenant menerima order untuk diproses',
   },
   {
     from: 'PAID',
     to: 'REJECTED',
-    allowedActors: ['TENANT', 'ADMIN'],
+    allowedActors: ['TENANT', 'ADMIN', 'SYSTEM'],
     description: 'Tenant menolak order (stok habis mendadak atau dapur overload)',
   },
   {
     from: 'PAID',
     to: 'CANCELLED',
-    allowedActors: ['CUSTOMER', 'ADMIN'],
+    allowedActors: ['CUSTOMER', 'ADMIN', 'SYSTEM'],
     description: 'Customer membatalkan order sebelum diterima oleh tenant',
   },
   {
     from: 'ACCEPTED',
     to: 'PREPARING',
-    allowedActors: ['TENANT', 'ADMIN'],
+    allowedActors: ['TENANT', 'ADMIN', 'SYSTEM'],
     description: 'Tenant mulai memasak/menyiapkan makanan',
   },
   {
     from: 'PREPARING',
     to: 'READY_FOR_PICKUP',
-    allowedActors: ['TENANT', 'ADMIN'],
+    allowedActors: ['TENANT', 'ADMIN', 'SYSTEM'],
     description: 'Makanan selesai disiapkan dan siap diambil di counter',
   },
   {
     from: 'READY_FOR_PICKUP',
     to: 'COMPLETED',
-    allowedActors: ['TENANT', 'ADMIN'],
+    allowedActors: ['TENANT', 'ADMIN', 'SYSTEM'],
     description: 'Customer mengambil makanan dan kode pickup berhasil diverifikasi',
   },
   {

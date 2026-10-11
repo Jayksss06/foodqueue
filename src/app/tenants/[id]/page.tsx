@@ -702,29 +702,30 @@ export default function TenantDetailPage({
         </div>
       </Modal>
 
-      {/* FLOATING MINI CART BAR (Mobile-Optimized) */}
+      {/* FLOATING MINI CART BAR (Mobile-Optimized & Ergonomic) */}
       {isCartBelongsToTenant && (
         <div className="floating-cart-bar">
-          <div className="floating-cart-inner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <Link href="/checkout" className="floating-cart-inner" aria-label="Lanjut ke proses checkout">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div className="cart-icon-circle">
-                <ShoppingBag size={20} />
+                <ShoppingBag size={20} strokeWidth={2.2} />
+                <span className="cart-badge-count">{cart.itemCount}</span>
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: '0.925rem' }}>
-                  {cart.itemCount} Item Dipilih
+                <div style={{ fontWeight: 850, fontSize: '1rem', color: '#FFFFFF', lineHeight: 1.2 }}>
+                  {formatRupiah(cart.total)}
                 </div>
-                <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>
-                  Total {formatRupiah(cart.total)}
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.9)', marginTop: '0.15rem' }}>
+                  {cart.itemCount} item · Siap ~{tenant.defaultPreparationTime} mnt
                 </div>
               </div>
             </div>
 
-            <Link href="/checkout" className="view-cart-btn">
+            <div className="view-cart-btn">
               <span>Lanjut Checkout</span>
-              <ArrowRight size={15} />
-            </Link>
-          </div>
+              <ArrowRight size={16} strokeWidth={2.5} />
+            </div>
+          </Link>
         </div>
       )}
 
@@ -914,55 +915,86 @@ export default function TenantDetailPage({
           bottom: calc(env(safe-area-inset-bottom, 0px) + 0.85rem);
           left: 0.85rem;
           right: 0.85rem;
-          max-width: 640px;
+          max-width: 600px;
           margin: 0 auto;
           z-index: 45;
           animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         .floating-cart-inner {
-          padding: 0.75rem 1.15rem;
-          border-radius: var(--radius-xl);
-          background: var(--gradient-primary);
-          color: #ffffff;
-          box-shadow: 0 16px 36px rgba(240, 89, 42, 0.28);
           display: flex;
           align-items: center;
           justify-content: space-between;
+          padding: 0.85rem 1.15rem;
+          border-radius: var(--radius-xl);
+          background: var(--gradient-primary);
+          color: #ffffff;
+          box-shadow: 0 14px 36px rgba(240, 89, 42, 0.35);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           border: 1px solid rgba(255, 255, 255, 0.25);
+          text-decoration: none;
+          cursor: pointer;
+          transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .floating-cart-inner:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 18px 42px rgba(240, 89, 42, 0.42);
+        }
+
+        .floating-cart-inner:active {
+          transform: scale(0.98);
         }
 
         .cart-icon-circle {
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          background-color: rgba(255, 255, 255, 0.22);
+          position: relative;
+          width: 42px;
+          height: 42px;
+          border-radius: var(--radius-lg);
+          background-color: rgba(255, 255, 255, 0.25);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          color: #ffffff;
+        }
+
+        .cart-badge-count {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          background-color: #ffffff;
+          color: var(--color-primary-600);
+          font-size: 0.7rem;
+          font-weight: 850;
+          min-width: 18px;
+          height: 18px;
+          border-radius: var(--radius-full);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 3px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
         .view-cart-btn {
-          padding: 0.5rem 1rem;
-          border-radius: var(--radius-lg);
+          padding: 0.55rem 1.15rem;
+          border-radius: var(--radius-full);
           background-color: #ffffff;
           color: var(--color-primary-600);
-          font-weight: 750;
-          font-size: 0.825rem;
+          font-weight: 800;
+          font-size: 0.85rem;
           display: inline-flex;
           align-items: center;
-          gap: 0.35rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          text-decoration: none;
+          gap: 0.4rem;
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
           white-space: nowrap;
-          transition: transform var(--transition-fast);
+          transition: transform var(--transition-fast), background-color var(--transition-fast);
         }
 
-        .view-cart-btn:active {
-          transform: scale(0.96);
+        .view-cart-btn:hover {
+          background-color: #fff7ed;
         }
 
         @keyframes slideUp {

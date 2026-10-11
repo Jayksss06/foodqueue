@@ -67,6 +67,10 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
+  // Status simulation state (untuk mempermudah testing alur pesanan sampai pengambilan)
+  const [isSimulatingStatus, setIsSimulatingStatus] = useState(false);
+  const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
+
   // Fetch order data
   const fetchOrder = async (isSilent = false) => {
     try {
@@ -156,6 +160,34 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
       navigator.clipboard.writeText(shareUrl);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
+
+  const handleSimulateStatus = async (toStatus?: string) => {
+    setIsSimulatingStatus(true);
+    setSimulationMessage(null);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/simulate-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: toStatus,
+          token: activeToken || undefined,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.data?.success) {
+        throw new Error(json.error?.message || json.data?.message || 'Gagal mengubah status simulasi.');
+      }
+
+      await fetchOrder(true);
+      setSimulationMessage('Status pesanan berhasil diperbarui!');
+      setTimeout(() => setSimulationMessage(null), 3000);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSimulatingStatus(false);
     }
   };
 
@@ -507,6 +539,108 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
           <OrderTimeline currentStatus={order.status} statusLogs={order.statusLogs || []} />
         </div>
       </Card>
+
+      {/* Panel Simulasi Alur Pesanan (Mode Pengujian Prototype) */}
+      {!['COMPLETED', 'CANCELLED', 'REJECTED', 'REFUNDED'].includes(order.status) && (
+        <Card
+          padding="md"
+          style={{
+            marginBottom: '1.5rem',
+            backgroundColor: 'var(--color-surface)',
+            border: '2px dashed var(--color-primary-400)',
+            borderRadius: 'var(--radius-xl)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-primary-600)' }}>
+              <Sparkles size={16} /> Mode Pengujian Alur Pesanan
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {simulationMessage && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-forest)', fontWeight: 700 }}>
+                  {simulationMessage}
+                </span>
+              )}
+              <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-bg)', color: 'var(--color-ink-500)', fontWeight: 650 }}>
+                Simulasi Otomatis
+              </span>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.8rem', color: 'var(--color-ink-600)', marginBottom: '0.85rem', lineHeight: 1.45 }}>
+            Simulasikan respons stan makanan langkah demi langkah sampai tahap siap diambil & verifikasi QR Code selesai:
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {order.status === 'PAID' && (
+              <>
+                <Button
+                  size="sm"
+                  loading={isSimulatingStatus}
+                  onClick={() => handleSimulateStatus('ACCEPTED')}
+                  icon={<CheckCircle2 size={15} />}
+                >
+                  Stan Terima Pesanan
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={isSimulatingStatus}
+                  onClick={() => handleSimulateStatus('READY_FOR_PICKUP')}
+                  icon={<QrCode size={15} />}
+                >
+                  Langsung ke Siap Diambil
+                </Button>
+              </>
+            )}
+
+            {order.status === 'ACCEPTED' && (
+              <>
+                <Button
+                  size="sm"
+                  loading={isSimulatingStatus}
+                  onClick={() => handleSimulateStatus('PREPARING')}
+                  icon={<Clock size={15} />}
+                >
+                  Stan Mulai Memasak
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={isSimulatingStatus}
+                  onClick={() => handleSimulateStatus('READY_FOR_PICKUP')}
+                  icon={<QrCode size={15} />}
+                >
+                  Langsung ke Siap Diambil
+                </Button>
+              </>
+            )}
+
+            {order.status === 'PREPARING' && (
+              <Button
+                size="sm"
+                loading={isSimulatingStatus}
+                onClick={() => handleSimulateStatus('READY_FOR_PICKUP')}
+                icon={<QrCode size={15} />}
+              >
+                Makanan Matang & Siap Diambil
+              </Button>
+            )}
+
+            {order.status === 'READY_FOR_PICKUP' && (
+              <Button
+                size="sm"
+                loading={isSimulatingStatus}
+                onClick={() => handleSimulateStatus('COMPLETED')}
+                style={{ backgroundColor: 'var(--color-secondary-600)' }}
+                icon={<CheckCircle2 size={15} />}
+              >
+                Simulasikan Pengambilan Selesai (Verifikasi QR)
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Slot & Tenant Location Card */}
       <Card style={{ marginBottom: '1.5rem' }}>
