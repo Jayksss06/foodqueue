@@ -6,7 +6,7 @@ Dokumen ini menjelaskan arsitektur perangkat lunak, rancangan basis data relasio
 
 ## 1. Arsitektur Perangkat Lunak (Layered Clean Architecture)
 
-FoodQueue dibangun mengikuti prinsip **Separation of Concerns (SoC)** dan **Domain-Driven Design (DDD)** ringan yang memisahkan logika bisnis murni dari kerangka kerja (framework) web:
+FoodQueue dibangun mengikuti prinsip **Separation of Concerns (SoC)** dan **Domain-Driven Design (DDD)** yang memisahkan logika bisnis murni dari kerangka kerja (framework) web:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -43,22 +43,23 @@ FoodQueue dibangun mengikuti prinsip **Separation of Concerns (SoC)** dan **Doma
 
 ## 2. Struktur Basis Data Relasional (Entity Relationship)
 
-Database dirancang dengan **18 model tabel relasional** ternormalisasi (3NF) di atas PostgreSQL:
+Database dirancang dengan **19 model tabel relasional** ternormalisasi (3NF) di atas PostgreSQL:
 
 | Model Tabel | Tujuan & Tanggung Jawab | Kunci Unik / Indeks Utama |
 | :--- | :--- | :--- |
 | `users` | Akun pengguna (Customer, Tenant Owner, Admin) | `email (unique)`, `[role, status]` |
 | `venues` | Lokasi fisik food court / kampus | `id (PK)` |
-| `tenants` | Profil stand makanan UMKM mitra | `slug (unique)`, `[status, location]` |
+| `tenant_categories` | Klasifikasi kategori stand kantin (Makanan, Minuman, Kopi, dsb.) | `name (unique)`, `slug (unique)` |
+| `tenants` | Profil stand makanan UMKM mitra | `slug (unique)`, `[status, location]`, `[tenantCategoryId]` |
 | `tenant_operating_hours` | Jam buka harian (0 = Minggu s/d 6 = Sabtu) | `[tenantId, dayOfWeek] (composite unique)` |
-| `categories` | Taksonomi makanan & minuman | `name (unique)`, `slug (unique)` |
-| `menus` | Katalog hidangan, harga, dan sisa stok porsi | `[tenantId, status]`, `[categoryId]` |
-| `carts` | Keranjang belanja per pelanggan | `userId (unique)` |
+| `categories` | Taksonomi menu makanan & minuman per stan | `name (unique)`, `slug (unique)` |
+| `menus` | Katalog hidangan, harga, waktu masak, dan sisa stok porsi | `[tenantId, status]`, `[categoryId]` |
+| `carts` | Keranjang belanja pengguna terdaftar | `userId (unique)` |
 | `cart_items` | Rincian menu dalam keranjang | `[cartId, menuId] (composite unique)` |
 | `pickup_slots` | Jendela waktu pengambilan 15 menit | `[tenantId, startAt] (composite unique)`, `[tenantId, date]` |
-| `orders` | Header transaksi pre-order & scheduled pickup | `orderNumber (unique)`, `pickupCode (unique)`, `guestToken (unique)`, `idempotencyKey (unique)` |
+| `orders` | Header transaksi pre-order & scheduled pickup (Guest & Member) | `orderNumber (unique)`, `pickupCode (unique)`, `guestToken (unique)`, `idempotencyKey (unique)`, `[guestPhone]` |
 | `order_items` | Snapshot menu, harga historis, dan jumlah porsi | `[orderId, menuId]` |
-| `payments` | Header pembayaran (QRIS, VA, E-Wallet) | `orderId (unique)`, `paymentRef (unique)` |
+| `payments` | Header pembayaran (QRIS, VA, E-Wallet) | `orderId (unique)`, `transactionReference (unique)` |
 | `payment_attempts` | Jejak audit riwayat percobaan pembayaran | `[paymentId, createdAt]` |
 | `order_status_logs` | Jejak audit histori perubahan status pesanan | `[orderId, createdAt]` |
 | `notifications` | Notifikasi in-app untuk pembaruan status | `[userId, readAt, createdAt]` |
@@ -76,38 +77,31 @@ FoodQueue mengimplementasikan **Atomic Conditional SQL Updates** di dalam `prism
 
 ### 3.1 Pemesanan Kuota Slot yang Aman (Thread-Safe Slot Booking)
 ```typescript
-// Query dieksekusi secara atomik pada level database:
-const updatedSlot = await tx.pickupSlot.updateMany({
-  where: {
-    id: slotId,
-    status: 'OPEN',
-    currentOrders: { lt: capacity }, // Memastikan slot belum penuh
-  },
-  data: {
-    currentOrders: { increment: 1 },
-  },
-});
+const updatedCount = await tx.$executeRaw`
+  UPDATE "pickup_slots"
+  SET "current_orders" = "current_orders" + 1
+  WHERE "id" = ${slotId}
+    AND "status" = 'OPEN'
+    AND "current_orders" < "capacity"
+`;
 
-if (updatedSlot.count === 0) {
-  throw new Error('SLOT_FULL: Kuota slot pengambilan pada jam ini telah penuh.');
+if (updatedCount === 0) {
+  throw new Error('SLOT_FULL: Waktu pengambilan yang Anda pilih sudah penuh. Silakan pilih waktu lain.');
 }
 ```
 
 ### 3.2 Reservasi Stok Porsi Menu (Atomic Stock Reservation)
 ```typescript
-const updatedMenu = await tx.menu.updateMany({
-  where: {
-    id: item.menuId,
-    stock: { gte: item.quantity }, // Memastikan stok cukup
-    status: 'AVAILABLE',
-  },
-  data: {
-    stock: { decrement: item.quantity },
-  },
-});
+const updatedRows = await tx.$executeRaw`
+  UPDATE "menus"
+  SET "stock" = "stock" - ${item.quantity}
+  WHERE "id" = ${item.menuId}
+    AND "status" = 'AVAILABLE'
+    AND "stock" >= ${item.quantity}
+`;
 
-if (updatedMenu.count === 0) {
-  throw new Error(`INSUFFICIENT_STOCK: Stok hidangan "${item.name}" tidak mencukupi.`);
+if (updatedRows === 0) {
+  throw new Error(`MENU_OUT_OF_STOCK: Stok ${item.name} tidak mencukupi untuk jumlah yang dipesan.`);
 }
 ```
 
@@ -118,14 +112,14 @@ Setiap permintaan checkout membawa `idempotencyKey` acak (RFC 4122 UUID v4) yang
 
 ## 4. Keamanan & Autentikasi (Security Architecture)
 
-1. **Password Hashing**: Kata sandi di-hash menggunakan algoritma **Bcrypt** dengan salt round 10.
+1. **Password Hashing**: Kata sandi pengelola di-hash menggunakan algoritma **Bcrypt** dengan salt round 10.
 2. **Stateless JWT with State Revocation**:
    - Token ditandatangani menggunakan pustaka `jose` (HS256) dengan masa berlaku 7 hari.
    - Disimpan di dalam cookie `fq_session` bertipe `httpOnly`, `sameSite=lax`, dan `secure` pada production.
-   - Dilengkapi atribut `sessionVersion`. Saat pengguna keluar atau admin melakukan *suspend*, kolom `sessionVersion` pada tabel `users` di-increment, sehingga seluruh token lama yang beredar langsung tidak valid.
+   - Dilengkapi atribut `sessionVersion`. Saat pengguna keluar atau admin melakukan suspend, kolom `sessionVersion` pada tabel `users` di-increment, sehingga seluruh token lama yang beredar langsung tidak valid.
 3. **Pencegahan Insecure Direct Object References (IDOR)**:
-   - Endpoint portal merchant (`/api/tenant/*`) mengekstrak `tenantId` langsung dari JWT sesi terotentikasi, bukan dari URL query parameter yang dapat dimanipulasi klien.
-   - **Otorisasi Tamu (Guest Secret Token)**: Pesanan tamu dilindungi oleh `guestToken` (UUID v4) kriptografis. Endpoint pelacakan (`/orders/[id]?token=...`) dan pembayaran hanya mengizinkan akses jika token di URL cocok persis dengan `order.guestToken`, mencegah pembobolan melalui tebakan ID pesanan.
+   - Endpoint portal merchant (`/api/tenant/*`) mengekstrak `tenantId` langsung dari JWT sesi terotentikasi, bukan dari URL parameter yang dapat dimanipulasi klien.
+   - **Otorisasi Tamu (Guest Secret Token)**: Pesanan tamu dilindungi oleh `guestToken` (UUID v4) kriptografis. Endpoint pelacakan (`/orders/[id]?token=...`) dan pembayaran hanya mengizinkan akses jika token di parameter cocok persis dengan `order.guestToken`, mencegah pembobolan melalui tebakan ID pesanan.
 4. **Validasi Input Ketat**:
    - Seluruh payload request divalidasi menggunakan skema **Zod** sebelum mencapai layer service.
 
@@ -133,7 +127,8 @@ Setiap permintaan checkout membawa `idempotencyKey` acak (RFC 4122 UUID v4) yang
 
 ## 5. Arsitektur Pemesanan Langsung Tanpa Login (Direct Guest Checkout)
 
-Dalam rancangan sistem terkini, sistem login bagi pembeli **ditiadakan 100%** untuk memaksimalkan efisiensi waktu istirahat mahasiswa:
-1. **Client-Side Cart Engine**: Keranjang belanja berjalan di browser melalui `localStorage` (`foodqueue_guest_cart`) dengan validasi otomatis aturan bisnis BR-05 (satu pesanan hanya boleh berasal dari satu tenant).
+Dalam rancangan sistem mutakhir, sistem login bagi pembeli tidak lagi menjadi prasyarat untuk bertransaksi:
+1. **Client-Side Cart Engine**: Keranjang belanja beroperasi di browser melalui `localStorage` (`foodqueue_guest_cart`) dengan validasi otomatis aturan bisnis BR-05 (satu pesanan hanya boleh berasal dari satu tenant).
 2. **Seamless Biodata Capture**: Pembeli hanya perlu memasukkan Nama Lengkap dan Nomor WhatsApp saat checkout. Data tersimpan di browser (`foodqueue_guest_info`) untuk digunakan kembali secara otomatis pada pesanan berikutnya.
-3. **Portal Pengelola Terisolasi**: Halaman login (`/login`) didedikasikan secara eksklusif bagi pemilik stan (Tenant) dan Administrator untuk mengelola operasional kantin.
+3. **Portal Pengelola Terisolasi**: Halaman login (`/login`) didedikasikan secara terfokus bagi pemilik stan (Tenant) dan Administrator untuk mengelola operasional kantin.
+4. **Dual-Query Order Tracking**: Endpoint `/api/orders` mendukung pemuatan pesanan terpadu baik untuk pesanan berotentikasi maupun pesanan tamu melalui agregasi `guestOrderIds` dan verifikasi `guestTokens`.

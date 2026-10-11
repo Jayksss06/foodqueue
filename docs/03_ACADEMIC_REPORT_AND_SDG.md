@@ -19,9 +19,9 @@ Menimbulkan tiga dampak negatif mendasar:
 ## 2. Paradigma Solusi FoodQueue
 
 FoodQueue merekayasa ulang alur operasional kantin menjadi:
-$$\text{Pre-Order dari Kelas/Kost} \rightarrow \text{Bayar Nontunai} \rightarrow \text{Datang di Jam Slot Terjadwal} \rightarrow \text{Scan QR} \rightarrow \text{Ambil Makanan}$$
+$$\text{Pre-Order Tanpa Hambatan (Guest-First)} \rightarrow \text{Bayar Nontunai} \rightarrow \text{Datang di Jam Slot Terjadwal} \rightarrow \text{Scan QR} \rightarrow \text{Ambil Makanan}$$
 
-Sistem memberlakukan **pembatasan kuota kapasitas per jendela 15 menit** dan **visibilitas batch memasak dapur** secara real-time.
+Sistem memberlakukan **pembatasan kuota kapasitas per jendela 15 menit**, **pemberian kategori stand terpadu**, dan **visibilitas batch memasak dapur** secara real-time. Dengan meniadakan kewajiban registrasi akun bagi mahasiswa, friksi digital diminimalkan sehingga alur pemesanan dapat dituntaskan dalam waktu kurang dari 45 detik dari ruang kelas atau kost.
 
 ---
 
@@ -41,7 +41,7 @@ Platform FoodQueue dirancang selaras dengan target Tujuan Pembangunan Berkelanju
 *Target: Mengurangi timbulan sampah makanan (food waste) melalui pencegahan dan perencanaan produksi.*
 - **Indikator**: Penurunan porsi makanan berlebih yang terbuang di akhir jam operasional kantin.
 - **Implementasi Sistem**:
-  - Fitur **Batch Masak Dapur (Kitchen Production Summary)** mengakumulasi jumlah pasti hidangan yang dipesan sebelum dimasak (misal: *14 porsi Nasi Ayam Penyet pada slot 12.00–12.15*).
+  - Fitur **Batch Masak Dapur (Kitchen Production Summary)** mengakumulasi jumlah pasti hidangan yang dipesan sebelum dimasak (misal: 14 porsi Nasi Ayam Penyet pada slot 12.00–12.15).
   - Mengubah paradigma dari *Make-to-Stock* (spekulatif) menjadi *Make-to-Order Scheduled* (berbasis permintaan riil).
   - Mengurangi potensi bahan makanan sisa terbuang hingga 18–25% berdasarkan model simulasi operasional.
 
@@ -59,10 +59,11 @@ Platform FoodQueue dirancang selaras dengan target Tujuan Pembangunan Berkelanju
 
 | Kategori Pengujian | Cakupan Uji | Hasil Evaluasi |
 | :--- | :--- | :--- |
-| **Unit Testing (Domain)** | State transition, role actor permissions, pricing calculation, slot generation, lead time check | **19/19 Lulus (100%)** — vitest |
+| **Unit Testing (Domain & Service)** | State transition, role actor permissions, pricing calculation, slot generation, lead time check, guest checkout validation | **23/23 Lulus (100%)** — vitest |
 | **Static Type Checking** | Strict TypeScript compile (`tsc --noEmit`) pada seluruh komponen Next.js dan route handlers | **0 Error (Lulus)** |
+| **Production Build** | Kompilasi Turbopack Next.js (55 route handlers dan halaman statis/dinamis) | **0 Error (Lulus)** |
 | **Atomic Transactions** | Uji isolasi pemesanan stok dan kuota slot bersamaan (race condition) | Aman via conditional SQL update |
-| **Security Audit** | JWT token revocation via session versioning, IDOR prevention, password hashing | Terverifikasi aman |
+| **Security Audit** | JWT token revocation via session versioning, IDOR prevention, guest authorization token, password hashing | Terverifikasi aman |
 
 ---
 
@@ -76,3 +77,6 @@ Platform FoodQueue dirancang selaras dengan target Tujuan Pembangunan Berkelanju
 
 ### Q3: Bagaimana mencegah dua mahasiswa memesan porsi terakhir di detik yang sama (Race Condition)?
 > **Jawaban**: Kami menerapkan *Atomic Conditional Update* di layer database relasional (`UPDATE menus SET stock = stock - q WHERE stock >= q`). Jika stok tidak memenuhi kondisi `stock >= q`, update mengembalikan count 0 dan database memicu *rollback* transaksi seketika, sehingga tidak mungkin terjadi overselling.
+
+### Q4: Mengapa sistem meniadakan kewajiban registrasi/login bagi mahasiswa (Guest-First Paradigm)?
+> **Jawaban**: Pada ekosistem kampus dengan jeda istirahat terbatas (30–45 menit), friksi pendaftaran seperti pengisian form panjang dan verifikasi email menyebabkan rasio penurunan konversi (*drop-off rate*) yang tinggi. Dengan pendekatan *Guest-First*, mahasiswa dapat menyelesaikan pemesanan dalam beberapa detik, sementara privasi dan otorisasi pesanan tetap terlindungi melalui token kriptografis `guestToken` unik di peramban.

@@ -32,7 +32,18 @@ export const GET = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthCo
 
     const where: any = {};
 
-    if (guestOrderIds) {
+    if (guestOrderIds && ctx.user) {
+      const idsList = guestOrderIds.split(',').map((s) => s.trim()).filter(Boolean);
+      const tokenList = guestTokens ? guestTokens.split(',').map((s) => s.trim()).filter(Boolean) : [];
+      where.OR = [
+        { userId: ctx.user.id },
+        {
+          id: { in: idsList },
+          isGuest: true,
+          ...(tokenList.length > 0 ? { guestToken: { in: tokenList } } : {}),
+        },
+      ];
+    } else if (guestOrderIds) {
       const idsList = guestOrderIds.split(',').map((s) => s.trim()).filter(Boolean);
       if (idsList.length === 0) {
         return apiSuccess([], { page: 1, pageSize, total: 0, totalPages: 0 });

@@ -6,15 +6,19 @@ export class PickupSlotService {
   /**
    * Memastikan slot pickup untuk tanggal tertentu telah ter-generate di database berdasarkan jam operasional tenant.
    */
-  public static async ensureDailySlots(tenantId: string, dateStr: string): Promise<void> {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
+  public static async ensureDailySlots(tenantIdOrSlug: string, dateStr: string): Promise<void> {
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        OR: [{ id: tenantIdOrSlug }, { slug: tenantIdOrSlug }],
+      },
       include: { operatingHours: true },
     });
 
     if (!tenant) {
       throw new Error('NOT_FOUND: Tenant tidak ditemukan.');
     }
+
+    const resolvedTenantId = tenant.id;
 
     const [year, month, day] = dateStr.split('-').map((n) => parseInt(n, 10));
     const targetDate = new Date(year, month - 1, day);
@@ -37,7 +41,7 @@ export class PickupSlotService {
     // Cek apakah slot sudah pernah di-generate sebelumnya untuk tanggal ini
     const existingCount = await prisma.pickupSlot.count({
       where: {
-        tenantId,
+        tenantId: resolvedTenantId,
         date: targetDate,
       },
     });
@@ -49,7 +53,7 @@ export class PickupSlotService {
     // Lakukan bulk insert dalam 1 batch query SQL
     await prisma.pickupSlot.createMany({
       data: slotDefs.map((def) => ({
-        tenantId,
+        tenantId: resolvedTenantId,
         date: targetDate,
         startAt: def.startAt,
         endAt: def.endAt,
@@ -65,20 +69,23 @@ export class PickupSlotService {
    * Mengambil daftar slot pickup untuk tenant dan tanggal tertentu beserta status ketersediaannya
    */
   public static async getAvailableSlots(
-    tenantId: string,
+    tenantIdOrSlug: string,
     dateStr: string,
     preparationMinutes: number = 10
   ): Promise<EvaluatedSlotResult[]> {
-    await this.ensureDailySlots(tenantId, dateStr);
-
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { status: true, isAcceptingOrders: true },
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        OR: [{ id: tenantIdOrSlug }, { slug: tenantIdOrSlug }],
+      },
+      select: { id: true, status: true, isAcceptingOrders: true },
     });
 
     if (!tenant) {
       throw new Error('NOT_FOUND: Tenant tidak ditemukan.');
     }
+
+    const resolvedTenantId = tenant.id;
+    await this.ensureDailySlots(resolvedTenantId, dateStr);
 
     const [year, month, day] = dateStr.split('-').map((n) => parseInt(n, 10));
     const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
@@ -86,7 +93,7 @@ export class PickupSlotService {
 
     const slots = await prisma.pickupSlot.findMany({
       where: {
-        tenantId,
+        tenantId: resolvedTenantId,
         startAt: {
           gte: startOfDay,
           lte: endOfDay,
