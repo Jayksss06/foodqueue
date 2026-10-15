@@ -100,4 +100,44 @@ describe('SlotPolicy Domain Unit Tests', () => {
     expect(result.isAvailable).toBe(true);
     expect(result.remainingCapacity).toBe(6);
   });
+
+  it('should reject invalid hour format or invalid time range in operatingHourItemSchema', async () => {
+    const { operatingHourItemSchema } = await import('@/validators');
+
+    // Jam tidak valid (misal 25:99)
+    const invalidFormat = operatingHourItemSchema.safeParse({
+      dayOfWeek: 1,
+      openTime: '25:99',
+      closeTime: '17:00',
+      isClosed: false,
+    });
+    expect(invalidFormat.success).toBe(false);
+
+    // Jam tutup lebih awal dari jam buka saat stand buka
+    const invalidRange = operatingHourItemSchema.safeParse({
+      dayOfWeek: 1,
+      openTime: '17:00',
+      closeTime: '08:00',
+      isClosed: false,
+    });
+    expect(invalidRange.success).toBe(false);
+
+    // Jam valid saat buka
+    const validOpen = operatingHourItemSchema.safeParse({
+      dayOfWeek: 1,
+      openTime: '08:30',
+      closeTime: '16:00',
+      isClosed: false,
+    });
+    expect(validOpen.success).toBe(true);
+
+    // Jam saat stand tutup (isClosed: true)
+    const validClosed = operatingHourItemSchema.safeParse({
+      dayOfWeek: 0,
+      openTime: '00:00',
+      closeTime: '00:00',
+      isClosed: true,
+    });
+    expect(validClosed.success).toBe(true);
+  });
 });

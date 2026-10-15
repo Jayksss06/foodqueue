@@ -18,10 +18,29 @@ export const POST = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthC
   }
 });
 
+let lastExpireExecution = 0;
+let isExpiringStaleOrders = false;
+const EXPIRE_THROTTLE_MS = 60 * 1000; // Maksimal 1 kali per 60 detik per instance server
+
+function safeTriggerThrottledStaleCleanup() {
+  const now = Date.now();
+  if (isExpiringStaleOrders || now - lastExpireExecution < EXPIRE_THROTTLE_MS) {
+    return;
+  }
+  isExpiringStaleOrders = true;
+  lastExpireExecution = now;
+
+  OrderService.expireStaleOrders()
+    .catch((err) => console.error('[OrderService.expireStaleOrders]:', err))
+    .finally(() => {
+      isExpiringStaleOrders = false;
+    });
+}
+
 export const GET = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthContext) => {
   try {
-    // Jalankan maintenance pembersihan stale orders secara lazy
-    OrderService.expireStaleOrders().catch((err) => console.error(err));
+    // Jalankan pembersihan pesanan kedaluwarsa secara throttled (mencegah DB lock contention)
+    safeTriggerThrottledStaleCleanup();
 
     const { searchParams } = new URL(req.url);
     const scope = searchParams.get('scope'); // 'active' atau 'history'
@@ -30,33 +49,37 @@ export const GET = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthCo
     const guestOrderIds = searchParams.get('guestOrderIds');
     const guestTokens = searchParams.get('guestTokens');
 
+    // Validasi otorisasi pesanan tamu secara berpasangan ketat (Mencegah IDOR)
+    const rawIds = (guestOrderIds || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const rawTokens = (guestTokens || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+    const guestPairs: Array<{ id: string; guestToken: string; isGuest: true }> = [];
+    if (rawIds.length > 0 && rawTokens.length > 0) {
+      const pairCount = Math.min(rawIds.length, rawTokens.length);
+      for (let i = 0; i < pairCount; i++) {
+        if (rawIds[i] && rawTokens[i]) {
+          guestPairs.push({
+            id: rawIds[i],
+            guestToken: rawTokens[i],
+            isGuest: true,
+          });
+        }
+      }
+    }
+
     const where: any = {};
 
-    if (guestOrderIds && ctx.user) {
-      const idsList = guestOrderIds.split(',').map((s) => s.trim()).filter(Boolean);
-      const tokenList = guestTokens ? guestTokens.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    if (ctx.user && guestPairs.length > 0) {
       where.OR = [
         { userId: ctx.user.id },
-        {
-          id: { in: idsList },
-          isGuest: true,
-          ...(tokenList.length > 0 ? { guestToken: { in: tokenList } } : {}),
-        },
+        ...guestPairs,
       ];
-    } else if (guestOrderIds) {
-      const idsList = guestOrderIds.split(',').map((s) => s.trim()).filter(Boolean);
-      if (idsList.length === 0) {
-        return apiSuccess([], { page: 1, pageSize, total: 0, totalPages: 0 });
-      }
-      where.id = { in: idsList };
-      where.isGuest = true;
-      if (guestTokens) {
-        const tokenList = guestTokens.split(',').map((s) => s.trim()).filter(Boolean);
-        where.guestToken = { in: tokenList };
-      }
+    } else if (guestPairs.length > 0) {
+      where.OR = guestPairs;
     } else if (ctx.user) {
       where.userId = ctx.user.id;
     } else {
+      // Tidak terotentikasi dan tidak memiliki pasangan token tamu valid
       return apiSuccess([], { page: 1, pageSize, total: 0, totalPages: 0 });
     }
 

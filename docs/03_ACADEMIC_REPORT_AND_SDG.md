@@ -59,9 +59,9 @@ Platform FoodQueue dirancang selaras dengan target Tujuan Pembangunan Berkelanju
 
 | Kategori Pengujian | Cakupan Uji | Hasil Evaluasi |
 | :--- | :--- | :--- |
-| **Unit Testing (Domain & Service)** | State transition, role actor permissions, pricing calculation, slot generation, lead time check, guest checkout validation | **23/23 Lulus (100%)** — vitest |
+| **Unit Testing (Domain & Service)** | State transition, role actor permissions, pricing calculation, slot generation, lead time check, guest checkout validation, operating hours regex | **24/24 Lulus (100%)** — vitest |
 | **Static Type Checking** | Strict TypeScript compile (`tsc --noEmit`) pada seluruh komponen Next.js dan route handlers | **0 Error (Lulus)** |
-| **Production Build** | Kompilasi Turbopack Next.js (55 route handlers dan halaman statis/dinamis) | **0 Error (Lulus)** |
+| **Production Build** | Kompilasi Turbopack Next.js (56 route handlers dan halaman statis/dinamis) | **0 Error (Lulus)** |
 | **Atomic Transactions** | Uji isolasi pemesanan stok dan kuota slot bersamaan (race condition) | Aman via conditional SQL update |
 | **Security Audit** | JWT token revocation via session versioning, IDOR prevention, guest authorization token, password hashing | Terverifikasi aman |
 

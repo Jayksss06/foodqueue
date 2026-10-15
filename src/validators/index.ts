@@ -59,12 +59,25 @@ export const updateTenantProfileSchema = z.object({
   isAcceptingOrders: z.boolean().optional(),
 });
 
-export const operatingHourItemSchema = z.object({
-  dayOfWeek: z.number().int().min(0).max(6),
-  openTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Format jam harus HH:mm'),
-  closeTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Format jam harus HH:mm'),
-  isClosed: z.boolean(),
-});
+export const operatingHourItemSchema = z
+  .object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    openTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Format jam buka harus HH:mm (00:00 - 23:59)'),
+    closeTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Format jam tutup harus HH:mm (00:00 - 23:59)'),
+    isClosed: z.boolean(),
+  })
+  .refine(
+    (data) => {
+      if (data.isClosed) return true;
+      const [openH, openM] = data.openTime.split(':').map(Number);
+      const [closeH, closeM] = data.closeTime.split(':').map(Number);
+      return closeH * 60 + closeM > openH * 60 + openM;
+    },
+    {
+      message: 'Jam tutup harus lebih lambat dari jam buka saat stand beroperasi aktif',
+      path: ['closeTime'],
+    }
+  );
 
 export const updateOperatingHoursSchema = z.object({
   hours: z.array(operatingHourItemSchema).length(7, 'Jadwal operasional harus mencakup 7 hari (Minggu s/d Sabtu)'),

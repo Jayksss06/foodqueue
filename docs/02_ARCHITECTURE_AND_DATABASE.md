@@ -119,9 +119,12 @@ Setiap permintaan checkout membawa `idempotencyKey` acak (RFC 4122 UUID v4) yang
    - Dilengkapi atribut `sessionVersion`. Saat pengguna keluar atau admin melakukan suspend, kolom `sessionVersion` pada tabel `users` di-increment, sehingga seluruh token lama yang beredar langsung tidak valid.
 3. **Pencegahan Insecure Direct Object References (IDOR)**:
    - Endpoint portal merchant (`/api/tenant/*`) mengekstrak `tenantId` langsung dari JWT sesi terotentikasi, bukan dari URL parameter yang dapat dimanipulasi klien.
-   - **Otorisasi Tamu (Guest Secret Token)**: Pesanan tamu dilindungi oleh `guestToken` (UUID v4) kriptografis. Endpoint pelacakan (`/orders/[id]?token=...`) dan pembayaran hanya mengizinkan akses jika token di parameter cocok persis dengan `order.guestToken`, mencegah pembobolan melalui tebakan ID pesanan.
+   - **Otorisasi Tamu (Guest Secret Token)**: Pesanan tamu dilindungi oleh `guestToken` (UUID v4) kriptografis. Endpoint pelacakan individu (`/orders/[id]?token=...`) dan kueri daftar pesanan (`/api/orders?guestOrderIds=...&guestTokens=...`) memvalidasi pencocokan berpasangan ketat 1-to-1 (`id`, `guestToken`). Permintaan tanpa token tamu yang sah ditolak secara mutlak untuk mencegah penyerang menebak nomor pesanan orang lain.
 4. **Validasi Input Ketat**:
-   - Seluruh payload request divalidasi menggunakan skema **Zod** sebelum mencapai layer service.
+   - Seluruh payload request divalidasi menggunakan skema **Zod** sebelum mencapai layer service, termasuk regex format jam operasional `^([01]\d|2[0-3]):([0-5]\d)$` dan verifikasi logis `closeTime > openTime`.
+5. **Pencegahan Efek Samping Tulis pada GET (Throttled Expiration & Dedicated Cron)**:
+   - Pembersihan pesanan kedaluwarsa dibatasi oleh in-memory throttle maksimal 1 kali per 60 detik pada endpoint GET untuk mencegah lonjakan konkurensi (database lock contention).
+   - Tersedia endpoint dedikasi `/api/cron/expire-orders` dengan pengamanan `CRON_SECRET` yang dapat dipicu secara berkala oleh Vercel Cron atau GitHub Actions.
 
 ---
 
@@ -131,4 +134,4 @@ Dalam rancangan sistem mutakhir, sistem login bagi pembeli tidak lagi menjadi pr
 1. **Client-Side Cart Engine**: Keranjang belanja beroperasi di browser melalui `localStorage` (`foodqueue_guest_cart`) dengan validasi otomatis aturan bisnis BR-05 (satu pesanan hanya boleh berasal dari satu tenant).
 2. **Seamless Biodata Capture**: Pembeli hanya perlu memasukkan Nama Lengkap dan Nomor WhatsApp saat checkout. Data tersimpan di browser (`foodqueue_guest_info`) untuk digunakan kembali secara otomatis pada pesanan berikutnya.
 3. **Portal Pengelola Terisolasi**: Halaman login (`/login`) didedikasikan secara terfokus bagi pemilik stan (Tenant) dan Administrator untuk mengelola operasional kantin.
-4. **Dual-Query Order Tracking**: Endpoint `/api/orders` mendukung pemuatan pesanan terpadu baik untuk pesanan berotentikasi maupun pesanan tamu melalui agregasi `guestOrderIds` dan verifikasi `guestTokens`.
+4. **Dual-Query Order Tracking**: Endpoint `/api/orders` mendukung pemuatan pesanan terpadu baik untuk pesanan berotentikasi maupun pesanan tamu melalui agregasi berpasangan `(id, guestToken)` yang kebal terhadap manipulasi IDOR.
