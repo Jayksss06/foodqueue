@@ -306,7 +306,7 @@ export class OrderService {
    * Mengubah status pesanan sesuai OrderStateMachine dan menangani rollback stok/slot atau refund
    */
   public static async changeOrderStatus(
-    actor: { id: string; role: ActorRole; tenantId?: string | null },
+    actor: { id?: string | null; role: ActorRole; tenantId?: string | null },
     orderId: string,
     targetStatus: OrderStatus,
     note?: string
@@ -366,13 +366,27 @@ export class OrderService {
         await PickupSlotService.releaseSlot(tx, order.pickupSlotId);
       }
 
+      // Pastikan actorId hanya diisi jika benar-benar ID user valid di tabel users (mencegah Foreign Key Violation)
+      let validActorId: string | null = null;
+      if (actor.id && actor.id !== 'SYSTEM' && actor.id !== 'GUEST') {
+        if (actor.role === 'TENANT' && actor.tenantId && actor.id === actor.tenantId) {
+          validActorId = order.tenant.ownerId;
+        } else {
+          const userRecord = await tx.user.findUnique({
+            where: { id: actor.id },
+            select: { id: true },
+          });
+          validActorId = userRecord ? userRecord.id : null;
+        }
+      }
+
       // Catat log riwayat status
       await tx.orderStatusLog.create({
         data: {
           orderId: order.id,
           fromStatus: order.status,
           toStatus: targetStatus,
-          actorId: actor.id === 'SYSTEM' ? null : actor.id,
+          actorId: validActorId,
           actorRole: actor.role === 'SYSTEM' ? null : (actor.role as any),
           note: note || null,
         },
@@ -459,8 +473,13 @@ export class OrderService {
       );
     }
 
+    const tenantOwner = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { ownerId: true },
+    });
+
     return await this.changeOrderStatus(
-      { id: order.tenantId, role: 'TENANT', tenantId },
+      { id: tenantOwner?.ownerId || null, role: 'TENANT', tenantId },
       order.id,
       'COMPLETED',
       'Kode pickup diverifikasi oleh tenant di kasir/counter.'
@@ -498,7 +517,7 @@ export class OrderService {
     }
 
     return await this.changeOrderStatus(
-      { id: sessionUser?.id || 'GUEST', role: 'CUSTOMER' },
+      { id: sessionUser?.id || null, role: 'CUSTOMER' },
       order.id,
       'CANCELLED',
       reason || 'Dibatalkan oleh pelanggan.'

@@ -143,7 +143,7 @@ export class PaymentService {
 
       // 3. Ubah status order ke PAID lewat OrderService
       const updatedOrder = await OrderService.changeOrderStatus(
-        { id: sessionUser?.id || 'GUEST', role: 'CUSTOMER' },
+        { id: sessionUser?.id || null, role: 'CUSTOMER' },
         order.id,
         'PAID',
         'Pembayaran simulasi berhasil diverifikasi.'
