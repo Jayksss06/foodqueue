@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
+import { BottomNav } from '@/components/ui/BottomNav';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useCart } from '@/context/CartContext';
@@ -22,11 +23,12 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>
         <Navbar />
-        <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--color-ink-400)' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5rem 1rem', color: 'var(--color-ink-400)' }}>
           Memuat keranjang belanja...
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -35,7 +37,7 @@ export default function CartPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>
         <Navbar />
-        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem 6rem 1rem' }}>
           <div style={{ textAlign: 'center', maxWidth: '400px' }}>
             <div
               style={{
@@ -64,6 +66,7 @@ export default function CartPage() {
             </Link>
           </div>
         </main>
+        <BottomNav />
       </div>
     );
   }

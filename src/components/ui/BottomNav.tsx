@@ -11,8 +11,13 @@ export function BottomNav() {
   const { cart } = useCart();
   const cartItemCount = cart?.itemCount || 0;
 
-  // Jangan tampilkan di halaman tenant dashboard atau admin panel
-  if (pathname.startsWith('/tenant') || pathname.startsWith('/admin')) {
+  // Jangan tampilkan di portal pengelola, formulir checkout, atau alur bayar
+  if (
+    pathname.startsWith('/tenant') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/checkout') ||
+    pathname.includes('/pay')
+  ) {
     return null;
   }
 

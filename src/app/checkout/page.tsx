@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
+import { BottomNav } from '@/components/ui/BottomNav';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -229,14 +230,18 @@ export default function CheckoutPage() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>
         <Navbar />
-        <div style={{ textAlign: 'center', padding: '5rem' }}>
-          <h2>Keranjang Kosong</h2>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 1rem', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-ink-900)' }}>Keranjang Kosong</h2>
+          <p style={{ color: 'var(--color-ink-500)', marginTop: '0.35rem', marginBottom: '1.25rem' }}>
+            Anda belum memilih menu makanan atau minuman dari kantin.
+          </p>
           <Link href="/tenants">
-            <Button style={{ marginTop: '1rem' }}>Pilih Menu Makanan</Button>
+            <Button>Pilih Menu Makanan</Button>
           </Link>
         </div>
+        <BottomNav />
       </div>
     );
   }

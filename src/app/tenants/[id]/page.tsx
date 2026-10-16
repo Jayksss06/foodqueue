@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/ui/Navbar';
+import { BottomNav } from '@/components/ui/BottomNav';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -126,25 +127,30 @@ export default function TenantDetailPage({
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>
         <Navbar />
-        <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--color-ink-400)' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5rem 1rem', color: 'var(--color-ink-400)' }}>
           Memuat menu tenant...
         </div>
+        <BottomNav />
       </div>
     );
   }
 
   if (!tenant) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>
         <Navbar />
-        <div style={{ textAlign: 'center', padding: '5rem' }}>
-          <h2>Stan Tidak Ditemukan</h2>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 1rem', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-ink-900)' }}>Stan Tidak Ditemukan</h2>
+          <p style={{ color: 'var(--color-ink-500)', marginTop: '0.35rem', marginBottom: '1.25rem' }}>
+            Stan yang Anda cari mungkin sudah tidak aktif atau tautan salah.
+          </p>
           <Link href="/tenants">
-            <Button style={{ marginTop: '1rem' }}>Kembali ke Daftar Tenant</Button>
+            <Button>Kembali ke Daftar Tenant</Button>
           </Link>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -155,7 +161,7 @@ export default function TenantDetailPage({
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg)' }}>
       <Navbar />
 
-      <main style={{ flex: 1, paddingBottom: isCartBelongsToTenant ? '8.5rem' : '4.5rem' }}>
+      <main style={{ flex: 1, paddingBottom: isCartBelongsToTenant ? '8.5rem' : '5.5rem' }}>
         {/* Header Cover & Info */}
         <div
           style={{
@@ -728,6 +734,9 @@ export default function TenantDetailPage({
           </Link>
         </div>
       )}
+
+      {/* Tampilkan BottomNav di HP jika Floating Cart Bar sedang tidak aktif */}
+      {!isCartBelongsToTenant && <BottomNav />}
 
       {/* Responsive Styles untuk 2 Kolom Menu di HP & Universal Layout */}
       <style jsx>{`

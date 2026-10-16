@@ -89,11 +89,12 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', paddingBottom: '90px' }}>
-        <Navbar />
-        <main className="container" style={{ maxWidth: '600px', padding: '3rem 1rem', textAlign: 'center' }}>
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', paddingBottom: '120px', display: 'flex', flexDirection: 'column' }}>
+      <Navbar />
+
+      {loading ? (
+        <main className="container" style={{ flex: 1, maxWidth: '600px', padding: '3rem 1rem', textAlign: 'center' }}>
           <div
             style={{
               width: '36px',
@@ -107,18 +108,8 @@ export default function ProfilePage() {
           />
           <p style={{ color: 'var(--color-ink-400)' }}>Memuat profil...</p>
         </main>
-        <BottomNav />
-      </div>
-    );
-  }
-
-  // Jika Login sebagai TENANT atau ADMIN
-  if (user) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', paddingBottom: '120px' }}>
-        <Navbar />
-
-        <main className="container" style={{ maxWidth: '640px', padding: '1.5rem 1rem' }}>
+      ) : user ? (
+        <main className="container" style={{ flex: 1, maxWidth: '640px', padding: '1.5rem 1rem' }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-ink-900)', marginBottom: '1.25rem' }}>
             Akun & Portal Pengelola
           </h1>
@@ -259,18 +250,9 @@ export default function ProfilePage() {
             <LogOut size={18} /> Keluar dari Akun Pengelola
           </Button>
         </main>
-
-        <BottomNav />
-      </div>
-    );
-  }
-
-  // Pengguna Tamu / Pembeli (100% Tanpa Login)
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg)', paddingBottom: '120px' }}>
-      <Navbar />
-
-      <main className="container" style={{ maxWidth: '640px', padding: '1.5rem 1rem' }}>
+      ) : (
+        /* Pengguna Tamu / Pembeli (100% Tanpa Login) */
+        <main className="container" style={{ flex: 1, maxWidth: '640px', padding: '1.5rem 1rem' }}>
         <div style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-ink-900)' }}>
@@ -424,6 +406,7 @@ export default function ProfilePage() {
           Mendukung SDGs 2026: Komunitas Berkelanjutan (SDG 11) & Efisiensi Konsumsi (SDG 12)
         </div>
       </main>
+      )}
 
       <BottomNav />
     </div>
