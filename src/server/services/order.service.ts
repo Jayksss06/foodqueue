@@ -5,7 +5,8 @@ import { Pricing } from '../domain/pricing';
 import { PickupSlotService } from './pickup-slot.service';
 import { generatePickupCode, generateUUID } from '@/lib/utils';
 import { NotificationService } from './notification.service';
-import { defaultPaymentProvider } from '../providers/payment/mock-payment-provider';
+import { getConfiguredProviderName } from '../providers/payment/payment-config';
+import { getPaymentProviderByName } from '../providers/payment/payment-provider.factory';
 
 export class OrderService {
   public static readonly PAYMENT_TIMEOUT_MINUTES = 15;
@@ -266,8 +267,9 @@ export class OrderService {
           data: {
             orderId: order.id,
             amount: pricing.total,
-            provider: 'MOCK',
+            provider: getConfiguredProviderName(),
             status: 'PENDING',
+            expiresAt,
           },
         });
 
@@ -333,7 +335,17 @@ export class OrderService {
     // Validasi aturan perpindahan state machine
     OrderStateMachine.assertTransition(order.status as OrderStatus, targetStatus, actor.role);
 
-    return await prisma.$transaction(async (tx) => {
+    const shouldRefundAfterTx =
+      order.status === 'PAID' &&
+      OrderStateMachine.requiresRefund('PAID', targetStatus) &&
+      Boolean(order.payment && order.payment.status === 'PAID' && order.payment.transactionReference);
+
+    const shouldCancelUnpaidCharge =
+      order.status === 'PENDING_PAYMENT' &&
+      targetStatus === 'CANCELLED' &&
+      Boolean(order.payment && order.payment.status === 'PENDING');
+
+    const updatedOrder = await prisma.$transaction(async (tx) => {
       const updateData: any = {
         status: targetStatus,
       };
@@ -348,10 +360,19 @@ export class OrderService {
         if (note) updateData.cancelReason = note;
       }
 
-      const updatedOrder = await tx.order.update({
+      const nextOrder = await tx.order.update({
         where: { id: order.id },
         data: updateData,
       });
+
+      // Tandai payment unpaid sebagai EXPIRED / FAILED saat order dibatalkan sebelum dibayar
+      if (shouldCancelUnpaidCharge && order.payment) {
+        const isExpiredReason = Boolean(note && /kedaluwarsa|expired/i.test(note));
+        await tx.payment.updateMany({
+          where: { id: order.payment.id, status: 'PENDING' },
+          data: { status: isExpiredReason ? 'EXPIRED' : 'FAILED' },
+        });
+      }
 
       // Lepaskan stok dan kapasitas slot jika order dibatalkan atau ditolak (BR-11)
       if (OrderStateMachine.releasesReservation(order.status as OrderStatus, targetStatus)) {
@@ -392,25 +413,6 @@ export class OrderService {
         },
       });
 
-      // Proses pengembalian dana (Refund) otomatis jika order sudah dibayar
-      if (order.status === 'PAID' && OrderStateMachine.requiresRefund('PAID', targetStatus)) {
-        if (order.payment && order.payment.status === 'PAID' && order.payment.transactionReference) {
-          await defaultPaymentProvider.refund({
-            transactionReference: order.payment.transactionReference,
-            amount: order.payment.amount,
-            reason: note || `Order ${targetStatus.toLowerCase()}`,
-          });
-
-          await tx.payment.update({
-            where: { id: order.payment.id },
-            data: {
-              status: 'REFUNDED',
-              refundedAt: now,
-            },
-          });
-        }
-      }
-
       // Kirim notifikasi in-app ke customer
       let notificationTitle = 'Update Status Pesanan';
       let notificationMsg = `Pesanan #${order.orderNumber} Anda diperbarui menjadi ${targetStatus}.`;
@@ -429,7 +431,7 @@ export class OrderService {
         notificationMsg = `Terima kasih! Jangan lupa beri ulasan untuk pesanan #${order.orderNumber}.`;
       } else if (targetStatus === 'REJECTED') {
         notificationTitle = 'Pesanan Ditolak';
-        notificationMsg = `Pesanan #${order.orderNumber} tidak dapat diproses: ${note || 'Dapur sedang penuh'}. Dana Anda dikembalikan.`;
+        notificationMsg = `Pesanan #${order.orderNumber} tidak dapat diproses: ${note || 'Dapur sedang penuh'}. Proses pengembalian dana Anda sedang dijalankan.`;
       }
 
       if (order.userId) {
@@ -442,8 +444,73 @@ export class OrderService {
         );
       }
 
-      return updatedOrder;
+      return nextOrder;
     });
+
+    // Side-effect gateway dijalankan DI LUAR transaksi database agar tidak menahan DB lock saat HTTP call
+    if (shouldCancelUnpaidCharge && order.payment?.transactionReference) {
+      try {
+        const provider = getPaymentProviderByName(order.payment.provider, false);
+        await provider.cancelCharge(order.payment.transactionReference);
+      } catch (err) {
+        console.warn('[OrderService] Gagal membatalkan charge gateway:', err);
+      }
+    }
+
+    if (shouldRefundAfterTx && order.payment?.transactionReference) {
+      try {
+        const provider = getPaymentProviderByName(order.payment.provider, false);
+        const refundResult = await provider.refund({
+          referenceId: `RFD-${order.orderNumber}-${Date.now().toString(36).toUpperCase()}`,
+          transactionReference: order.payment.transactionReference,
+          amount: order.payment.amount,
+          channelCode: order.payment.channelCode,
+          reason: note || `Order ${targetStatus.toLowerCase()}`,
+        });
+
+        await prisma.paymentAttempt.create({
+          data: {
+            paymentId: order.payment.id,
+            status: refundResult.status === 'SUCCESS' ? 'REFUNDED' : 'PENDING',
+            method: order.payment.method,
+            channelCode: order.payment.channelCode,
+            providerEventId: `refund:${refundResult.refundId}`,
+            message: refundResult.message,
+            rawResponse: refundResult.rawResponse ? (refundResult.rawResponse as any) : undefined,
+          },
+        });
+
+        if (refundResult.status === 'SUCCESS') {
+          await prisma.payment.update({
+            where: { id: order.payment.id },
+            data: {
+              status: 'REFUNDED',
+              refundedAt: new Date(),
+            },
+          });
+        } else if (refundResult.status === 'MANUAL_REQUIRED' || refundResult.status === 'FAILED') {
+          const admins = await prisma.user.findMany({
+            where: { role: 'ADMIN', status: 'ACTIVE' },
+            select: { id: true },
+          });
+          await Promise.all(
+            admins.map((admin) =>
+              NotificationService.createNotification(
+                admin.id,
+                'Tindak Lanjut Refund Manual',
+                `Pesanan #${order.orderNumber} (Rp ${order.payment!.amount.toLocaleString('id-ID')}) memerlukan refund manual: ${refundResult.message}`,
+                'PAYMENT',
+                '/admin/orders'
+              )
+            )
+          );
+        }
+      } catch (refundErr) {
+        console.error('[OrderService] Gagal memproses refund gateway:', refundErr);
+      }
+    }
+
+    return updatedOrder;
   }
 
   /**

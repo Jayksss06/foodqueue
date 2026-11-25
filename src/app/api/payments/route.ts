@@ -10,12 +10,18 @@ export const POST = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthC
     const body = await req.json();
     const validated = initiatePaymentSchema.parse(body);
     const { searchParams } = new URL(req.url);
-    const guestToken = validated.token || searchParams.get('token') || req.headers.get('x-guest-token');
+    const guestToken =
+      validated.token || searchParams.get('token') || req.headers.get('x-guest-token');
 
     const result = await PaymentService.initiatePayment(
       { user: ctx.user, guestToken },
       validated.orderId,
-      validated.method
+      validated.method,
+      {
+        channelCode: validated.channelCode,
+        customerPhone: validated.customerPhone || undefined,
+        forceRefresh: validated.forceRefresh,
+      }
     );
 
     return apiSuccess(result);

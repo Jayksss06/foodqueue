@@ -21,15 +21,26 @@ export default function AdminSettingsPage() {
   const [slotDuration, setSlotDuration] = useState('15');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [mockPayment, setMockPayment] = useState(true);
+  const [paymentRuntime, setPaymentRuntime] = useState<{
+    provider: string;
+    mode: string;
+    simulationEnabled: boolean;
+    webhookConfigured: boolean;
+  } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/admin/settings')
-      .then((res) => res.json())
-      .then((json) => {
+    Promise.all([
+      fetch('/api/admin/settings').then((res) => res.json()),
+      fetch('/api/payments/config').then((res) => res.json()).catch(() => null),
+    ])
+      .then(([json, paymentJson]) => {
+        if (paymentJson?.data) {
+          setPaymentRuntime(paymentJson.data);
+        }
         if (json.data && Array.isArray(json.data)) {
           for (const item of json.data) {
             if (item.key === 'PLATFORM_FEE') setPlatformFee(item.value);
@@ -193,8 +204,60 @@ export default function AdminSettingsPage() {
         <Card style={{ padding: '1.5rem' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <CreditCard size={20} color="var(--color-forest)" />
-            Integrasi Gateway & Pengujian
+            Status Payment Gateway & Pengujian
           </h2>
+
+          {paymentRuntime && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '0.75rem',
+              marginBottom: '1.15rem',
+              padding: '1rem',
+              borderRadius: 'var(--radius-md)',
+              background: paymentRuntime.mode === 'PRODUCTION' ? '#ECFDF5' : 'var(--color-surface-hover)',
+              border: `1px solid ${paymentRuntime.mode === 'PRODUCTION' ? '#A7F3D0' : 'var(--color-border)'}`,
+            }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Provider Aktif</div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', marginTop: '0.15rem' }}>{paymentRuntime.provider}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Mode Environment</div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', marginTop: '0.15rem', color: paymentRuntime.mode === 'PRODUCTION' ? 'var(--color-forest)' : '#B45309' }}>
+                  {paymentRuntime.mode}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Webhook Token</div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', marginTop: '0.15rem', color: paymentRuntime.webhookConfigured ? 'var(--color-forest)' : '#DC2626' }}>
+                  {paymentRuntime.webhookConfigured ? 'Terkonfigurasi' : 'Belum Diatur'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Proteksi Simulasi</div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem', marginTop: '0.15rem', color: paymentRuntime.simulationEnabled ? '#B45309' : 'var(--color-forest)' }}>
+                  {paymentRuntime.simulationEnabled ? 'Aktif (Local Dev)' : 'Terkunci (Production Safe)'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{
+            padding: '0.75rem 1rem',
+            marginBottom: '1rem',
+            borderRadius: 'var(--radius-md)',
+            background: '#F8FAFC',
+            border: '1px solid var(--color-border)',
+            fontSize: '0.8rem',
+            color: 'var(--color-text-muted)',
+          }}>
+            <strong>Endpoint Webhook Xendit:</strong>{' '}
+            <code>{typeof window !== 'undefined' ? `${window.location.origin}/api/payments/webhooks/xendit` : '/api/payments/webhooks/xendit'}</code>
+            <div style={{ marginTop: '0.25rem' }}>
+              Konfigurasi provider (<code>PAYMENT_PROVIDER</code>), <code>XENDIT_SECRET_KEY</code>, dan <code>XENDIT_WEBHOOK_TOKEN</code> dikelola melalui environment variables server agar aman di production.
+            </div>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{
@@ -206,16 +269,17 @@ export default function AdminSettingsPage() {
               borderRadius: 'var(--radius-md)'
             }}>
               <div>
-                <div style={{ fontWeight: 750, fontSize: '0.9rem' }}>Simulator Mock Payment Provider</div>
+                <div style={{ fontWeight: 750, fontSize: '0.9rem' }}>Preferensi Mock Payment (Hanya Local Dev)</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                  Mengizinkan pengujian alur bayar instan (QRIS, VA, E-Wallet) tanpa integrasi kartu kredit nyata.
+                  Di mode production atau saat <code>PAYMENT_PROVIDER=XENDIT</code>, simulasi selalu dikunci otomatis oleh server.
                 </div>
               </div>
               <input
                 type="checkbox"
                 checked={mockPayment}
+                disabled={paymentRuntime ? !paymentRuntime.simulationEnabled : false}
                 onChange={(e) => setMockPayment(e.target.checked)}
-                style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                style={{ width: '20px', height: '20px', cursor: paymentRuntime && !paymentRuntime.simulationEnabled ? 'not-allowed' : 'pointer' }}
               />
             </div>
 

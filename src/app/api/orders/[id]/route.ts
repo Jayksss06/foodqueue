@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server';
 import { withOptionalAuth, OptionalAuthContext, getRouteParam } from '@/server/http/auth-guard';
 import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiNotFound, apiForbidden } from '@/server/http/response';
+import { apiSuccess, apiNotFound } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
+import {
+  getConfiguredProviderName,
+  isSimulationAllowed,
+} from '@/server/providers/payment/payment-config';
 import QRCode from 'qrcode';
 
 export const GET = withOptionalAuth(
@@ -65,6 +69,8 @@ export const GET = withOptionalAuth(
       return apiSuccess({
         ...order,
         qrCodeDataUrl,
+        simulationEnabled: isSimulationAllowed(),
+        paymentProvider: getConfiguredProviderName(),
       });
     } catch (error) {
       return handleRouteError(error);

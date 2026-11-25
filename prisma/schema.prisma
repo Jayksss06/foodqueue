@@ -314,9 +314,14 @@ model Payment {
   orderId              String         @unique @map("order_id")
   amount               Int
   method               PaymentMethod?
+  channelCode          String?        @map("channel_code")
   provider             String         @default("MOCK")
   status               PaymentStatus  @default(PENDING)
   transactionReference String?        @unique @map("transaction_reference")
+  externalReference    String?        @map("external_reference")
+  gatewayPaymentId     String?        @map("gateway_payment_id")
+  paymentData          Json?          @map("payment_data")
+  expiresAt            DateTime?      @map("expires_at")
   paidAt               DateTime?      @map("paid_at")
   refundedAt           DateTime?      @map("refunded_at")
   createdAt            DateTime       @default(now()) @map("created_at")
@@ -326,20 +331,26 @@ model Payment {
   attempts PaymentAttempt[]
 
   @@index([status])
+  @@index([provider, status])
+  @@index([externalReference])
   @@map("payments")
 }
 
 model PaymentAttempt {
-  id        String        @id @default(cuid())
-  paymentId String        @map("payment_id")
-  status    PaymentStatus
-  method    PaymentMethod?
-  message   String?
-  rawResponse Json?       @map("raw_response")
-  createdAt DateTime      @default(now()) @map("created_at")
+  id              String         @id @default(cuid())
+  paymentId       String         @map("payment_id")
+  status          PaymentStatus
+  method          PaymentMethod?
+  channelCode     String?        @map("channel_code")
+  providerEventId String?        @map("provider_event_id")
+  message         String?
+  rawResponse     Json?          @map("raw_response")
+  createdAt       DateTime       @default(now()) @map("created_at")
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
+  @@index([paymentId, createdAt])
+  @@index([providerEventId])
   @@map("payment_attempts")
 }
 

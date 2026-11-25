@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import { withOptionalAuth, OptionalAuthContext, getRouteParam } from '@/server/http/auth-guard';
 import { prisma } from '@/lib/prisma';
 import { OrderService } from '@/server/services/order.service';
-import { apiSuccess, apiNotFound, apiBadRequest } from '@/server/http/response';
+import { isSimulationAllowed } from '@/server/providers/payment/payment-config';
+import { apiSuccess, apiNotFound, apiBadRequest, apiForbidden } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
 import { OrderStatus } from '@/types';
 
@@ -18,6 +19,12 @@ const STATUS_SEQUENCE: OrderStatus[] = [
 export const POST = withOptionalAuth(
   async (req: NextRequest, ctx: OptionalAuthContext, routeContext: unknown) => {
     try {
+      if (!isSimulationAllowed()) {
+        return apiForbidden(
+          'Endpoint simulasi status pesanan dinonaktifkan pada mode produksi / live payment gateway.'
+        );
+      }
+
       const id = await getRouteParam(routeContext, 'id', req);
       const { searchParams } = new URL(req.url);
 

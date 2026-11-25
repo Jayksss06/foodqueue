@@ -17,6 +17,37 @@ export type OrderStatus =
 
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'REFUNDED';
 export type PaymentMethod = 'QRIS' | 'EWALLET' | 'VIRTUAL_ACCOUNT';
+export type PaymentProviderName = 'XENDIT' | 'MOCK';
+export type PaymentEnvironmentMode = 'PRODUCTION' | 'SANDBOX' | 'MOCK' | 'UNCONFIGURED';
+export type PaymentChannelCode =
+  | 'QRIS'
+  | 'BCA_VIRTUAL_ACCOUNT'
+  | 'BNI_VIRTUAL_ACCOUNT'
+  | 'BRI_VIRTUAL_ACCOUNT'
+  | 'MANDIRI_VIRTUAL_ACCOUNT'
+  | 'PERMATA_VIRTUAL_ACCOUNT'
+  | 'BSI_VIRTUAL_ACCOUNT'
+  | 'DANA'
+  | 'SHOPEEPAY'
+  | 'OVO';
+
+export interface PaymentChannelOption {
+  code: PaymentChannelCode;
+  method: PaymentMethod;
+  label: string;
+  shortLabel: string;
+  description: string;
+  requiresPhone?: boolean;
+}
+
+export interface PaymentRuntimeConfig {
+  provider: PaymentProviderName;
+  mode: PaymentEnvironmentMode;
+  simulationEnabled: boolean;
+  webhookConfigured: boolean;
+  channels: Record<PaymentMethod, PaymentChannelOption[]>;
+}
+
 export type NotificationType = 'ORDER' | 'PAYMENT' | 'REVIEW' | 'SYSTEM';
 
 export interface UserSession {

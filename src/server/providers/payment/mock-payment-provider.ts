@@ -1,49 +1,83 @@
 import {
-  PaymentProvider,
+  CancelChargeResponse,
+  ChargeStatusResponse,
   CreateChargeRequest,
   CreateChargeResponse,
+  PaymentProvider,
   RefundRequest,
   RefundResponse,
 } from './payment-provider.interface';
+import {
+  buildPaymentInstructions,
+  sanitizeVaDisplayName,
+} from './payment-channels';
+import { renderQrCodeDataUrl } from './xendit-payment-provider';
+
+const MOCK_VA_PREFIX: Record<string, string> = {
+  BCA_VIRTUAL_ACCOUNT: '3901',
+  BNI_VIRTUAL_ACCOUNT: '8808',
+  BRI_VIRTUAL_ACCOUNT: '2621',
+  MANDIRI_VIRTUAL_ACCOUNT: '8902',
+  PERMATA_VIRTUAL_ACCOUNT: '8560',
+  BSI_VIRTUAL_ACCOUNT: '9001',
+};
 
 export class MockPaymentProvider implements PaymentProvider {
+  public readonly name = 'MOCK' as const;
+
   public async createCharge(req: CreateChargeRequest): Promise<CreateChargeResponse> {
     const reference = `MOCK-PAY-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    const expiresAtIso = req.expiresAt.toISOString();
+    const vaAccountName = sanitizeVaDisplayName(req.customerName);
 
     let qrPayload: string | undefined;
+    let qrImageDataUrl: string | undefined;
     let vaNumber: string | undefined;
-    const instructions: string[] = [];
+    let checkoutUrl: string | undefined;
 
-    switch (req.method) {
-      case 'QRIS':
-        qrPayload = `00020101021226680016ID.FOODQUEUE.MOCK0118FQ${req.orderNumber}520458125303360540${req.amount}5802ID5913FOODQUEUE KAMPUS6007JAKARTA6304`;
-        instructions.push('Buka aplikasi m-Banking atau e-Wallet yang mendukung QRIS.');
-        instructions.push('Pindai QR code di bawah.');
-        instructions.push('Periksa nama merchant FoodQueue dan nominal pembayaran.');
-        instructions.push('Tekan tombol simulasi untuk menyelesaikan pembayaran.');
-        break;
-
-      case 'VIRTUAL_ACCOUNT':
-        vaNumber = `8808${Math.floor(10000000 + Math.random() * 90000000)}`;
-        instructions.push(`Transfer ke Virtual Account: ${vaNumber}`);
-        instructions.push('Nama Akun: FoodQueue Kampus');
-        instructions.push('Nominal transfer harus tepat sama.');
-        instructions.push('Tekan tombol simulasi untuk konfirmasi pembayaran.');
-        break;
-
-      case 'EWALLET':
-        instructions.push('Buka aplikasi dompet digital Anda.');
-        instructions.push('Konfirmasi pembayaran pada notifikasi masuk.');
-        instructions.push('Tekan tombol simulasi untuk menyelesaikan transaksi.');
-        break;
+    if (req.method === 'QRIS') {
+      qrPayload = `00020101021226680016ID.FOODQUEUE.MOCK0118FQ${req.orderNumber}520458125303360540${req.amount}5802ID5913FOODQUEUE KAMPUS6007JAKARTA6304`;
+      qrImageDataUrl = await renderQrCodeDataUrl(qrPayload);
+    } else if (req.method === 'VIRTUAL_ACCOUNT') {
+      const prefix = MOCK_VA_PREFIX[req.channelCode] || '8808';
+      vaNumber = `${prefix}${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+    } else if (req.method === 'EWALLET') {
+      checkoutUrl = req.returnUrls.successUrl;
     }
+
+    const instructions = buildPaymentInstructions(req.channelCode, {
+      vaNumber,
+      amount: req.amount,
+      vaAccountName,
+    });
 
     return {
       transactionReference: reference,
-      provider: 'MOCK',
+      externalReference: req.externalReference,
+      provider: this.name,
+      channelCode: req.channelCode,
+      status: 'PENDING',
       qrPayload,
+      qrImageDataUrl,
       vaNumber,
+      vaAccountName: req.method === 'VIRTUAL_ACCOUNT' ? vaAccountName : undefined,
+      checkoutUrl,
+      expiresAt: expiresAtIso,
       instructions,
+    };
+  }
+
+  public async getChargeStatus(transactionReference: string): Promise<ChargeStatusResponse> {
+    return {
+      transactionReference,
+      status: 'PENDING',
+    };
+  }
+
+  public async cancelCharge(transactionReference: string): Promise<CancelChargeResponse> {
+    return {
+      cancelled: true,
+      message: `Simulasi pembatalan transaksi ${transactionReference} berhasil.`,
     };
   }
 
@@ -51,7 +85,7 @@ export class MockPaymentProvider implements PaymentProvider {
     return {
       refundId: `MOCK-REFUND-${Date.now()}`,
       status: 'SUCCESS',
-      message: `Simulasi pengembalian dana Rp ${req.amount} untuk transaksi ${req.transactionReference} berhasil.`,
+      message: `Simulasi pengembalian dana Rp ${req.amount.toLocaleString('id-ID')} untuk transaksi ${req.transactionReference} berhasil.`,
     };
   }
 }

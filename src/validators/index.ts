@@ -138,14 +138,38 @@ export const verifyPickupSchema = z.object({
 });
 
 // ================= PAYMENT SCHEMAS =================
+export const paymentChannelCodeSchema = z.enum([
+  'QRIS',
+  'BCA_VIRTUAL_ACCOUNT',
+  'BNI_VIRTUAL_ACCOUNT',
+  'BRI_VIRTUAL_ACCOUNT',
+  'MANDIRI_VIRTUAL_ACCOUNT',
+  'PERMATA_VIRTUAL_ACCOUNT',
+  'BSI_VIRTUAL_ACCOUNT',
+  'DANA',
+  'SHOPEEPAY',
+  'OVO',
+]);
+
 export const initiatePaymentSchema = z.object({
   orderId: z.string().min(1, 'ID order harus diisi'),
   method: z.enum(['QRIS', 'EWALLET', 'VIRTUAL_ACCOUNT']),
+  channelCode: paymentChannelCodeSchema.optional(),
+  customerPhone: z
+    .string()
+    .regex(/^(\+62|62|0)8[1-9][0-9]{6,10}$/, 'Format nomor HP Indonesia tidak valid (contoh: 081234567890)')
+    .optional()
+    .or(z.literal('')),
+  forceRefresh: z.boolean().optional().default(false),
   token: z.string().optional(),
 });
 
 export const simulatePaymentSchema = z.object({
   outcome: z.enum(['SUCCESS', 'FAILURE']),
+  token: z.string().optional(),
+});
+
+export const syncPaymentSchema = z.object({
   token: z.string().optional(),
 });
 

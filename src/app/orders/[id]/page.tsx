@@ -540,8 +540,8 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
         </div>
       </Card>
 
-      {/* Panel Simulasi Alur Pesanan (Mode Pengujian Prototype) */}
-      {!['COMPLETED', 'CANCELLED', 'REJECTED', 'REFUNDED'].includes(order.status) && (
+      {/* Panel Simulasi Alur Pesanan (Hanya tampil di Local Dev + Mock Provider; otomatis hilang di Production / Xendit) */}
+      {order.simulationEnabled && !['COMPLETED', 'CANCELLED', 'REJECTED', 'REFUNDED'].includes(order.status) && (
         <Card
           padding="md"
           style={{
@@ -737,6 +737,16 @@ function OrderDetailContent({ orderId }: { orderId: string }) {
               {formatRupiah(order.total ?? order.totalAmount ?? 0)}
             </span>
           </div>
+          {order.payment && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--color-text-muted)', paddingTop: '0.45rem', borderTop: '1px dashed var(--color-border)' }}>
+              <span>
+                Metode: <strong>{order.payment.channelCode || order.payment.method || '-'}</strong> ({order.payment.provider})
+              </span>
+              <span>
+                Status Bayar: <strong>{order.payment.status}</strong>
+              </span>
+            </div>
+          )}
         </div>
       </Card>
 
