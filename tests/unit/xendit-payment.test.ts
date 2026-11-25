@@ -265,6 +265,7 @@ describe('XenditPaymentProvider Core API v3', () => {
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.channel_code).toBe('OVO');
+    expect(body.channel_properties.account_mobile_number).toBe('+6281377770002');
     expect(body.customer.mobile_number).toBe('+6281377770002');
     expect(charge.checkoutUrl).toBe('https://checkout.xendit.co/web/ovo-demo');
   });

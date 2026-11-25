@@ -328,10 +328,17 @@ export class XenditPaymentProvider implements PaymentProvider {
         );
       }
 
-      payload.channel_properties = {
-        success_return_url: req.returnUrls.successUrl,
-        failure_return_url: req.returnUrls.failureUrl,
-      };
+      payload.channel_properties =
+        req.channelCode === 'OVO'
+          ? {
+              account_mobile_number: normalizedPhone,
+              success_return_url: req.returnUrls.successUrl,
+              failure_return_url: req.returnUrls.failureUrl,
+            }
+          : {
+              success_return_url: req.returnUrls.successUrl,
+              failure_return_url: req.returnUrls.failureUrl,
+            };
 
       const nameParts = req.customerName.trim().split(/\s+/);
       const givenNames = nameParts[0] || 'Pelanggan';
