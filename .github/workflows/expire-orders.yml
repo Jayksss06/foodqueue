@@ -1,0 +1,21 @@
+name: Expire Unpaid FoodQueue Orders
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger expire-orders endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          TARGET_URL="${APP_URL:-https://foodqueue-putd.vercel.app}"
+          TARGET_URL="${TARGET_URL%/}"
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${TARGET_URL}/api/cron/expire-orders"
