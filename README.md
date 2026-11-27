@@ -76,7 +76,7 @@ npm install
 Salin berkas `.env.example` ke `.env` dan masukkan connection string database PostgreSQL Anda (Neon / Supabase / Local):
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/foodqueue?schema=public"
-JWT_SECRET="foodqueue-super-secret-key-2026-production-ready-min-32-chars"
+JWT_SECRET="<generate-acak-minimal-32-karakter-via-openssl-rand-hex-64>"
 NODE_ENV="development"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```

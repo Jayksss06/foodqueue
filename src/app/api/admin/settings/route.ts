@@ -3,6 +3,8 @@ import { withAuth, AuthContext } from '@/server/http/auth-guard';
 import { prisma } from '@/lib/prisma';
 import { apiSuccess } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
+import { SystemSettingService } from '@/server/services/system-setting.service';
+import { getJwtSecurityStatus } from '@/lib/jwt';
 import { z } from 'zod';
 
 const updateSettingsSchema = z.object({
@@ -21,6 +23,13 @@ export const GET = withAuth(
       const items = await prisma.systemSetting.findMany({
         orderBy: { key: 'asc' },
       });
+      const includeSecurity = new URL(req.url).searchParams.get('includeSecurity') === 'true';
+      if (includeSecurity) {
+        return apiSuccess({
+          settings: items,
+          jwtSecurity: getJwtSecurityStatus(),
+        });
+      }
       return apiSuccess(items);
     } catch (error) {
       return handleRouteError(error);
@@ -51,6 +60,9 @@ export const PUT = withAuth(
           })
         )
       );
+
+      // Pastikan cache SystemSettingService langsung diperbarui
+      SystemSettingService.invalidateCache();
 
       const updated = await prisma.systemSetting.findMany({
         orderBy: { key: 'asc' },

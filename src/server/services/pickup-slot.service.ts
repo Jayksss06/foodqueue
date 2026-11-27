@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { SlotPolicy, EvaluatedSlotResult } from '../domain/slot-policy';
+import { SystemSettingService } from './system-setting.service';
 import { Prisma } from '@prisma/client';
 
 export class PickupSlotService {
@@ -29,11 +30,14 @@ export class PickupSlotService {
       return; // Tenant tutup pada hari ini
     }
 
+    const platformSettings = await SystemSettingService.getSettings();
+    const slotDuration = tenant.slotDurationMinutes || platformSettings.slotDurationMinutes;
+
     const slotDefs = SlotPolicy.generateSlotsForDate(
       dateStr,
       opHour.openTime,
       opHour.closeTime,
-      tenant.slotDurationMinutes
+      slotDuration
     );
 
     if (slotDefs.length === 0) return;

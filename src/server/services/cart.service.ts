@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { CartView, CartItemView } from '@/types';
 import { Pricing } from '../domain/pricing';
+import { SystemSettingService } from './system-setting.service';
 
 export class CartService {
   /**
@@ -81,8 +82,10 @@ export class CartService {
       };
     });
 
+    const platformSettings = await SystemSettingService.getSettings();
     const pricing = Pricing.calculateTotals(
-      itemsView.map((i) => ({ price: i.price, quantity: i.quantity }))
+      itemsView.map((i) => ({ price: i.price, quantity: i.quantity })),
+      platformSettings.platformFee
     );
 
     return {

@@ -5,6 +5,7 @@ import { Pricing } from '../domain/pricing';
 import { PickupSlotService } from './pickup-slot.service';
 import { generatePickupCode, generateUUID } from '@/lib/utils';
 import { NotificationService } from './notification.service';
+import { SystemSettingService } from './system-setting.service';
 import { getConfiguredProviderName } from '../providers/payment/payment-config';
 import { getPaymentProviderByName } from '../providers/payment/payment-provider.factory';
 
@@ -57,6 +58,14 @@ export class OrderService {
 
     if (existingOrder) {
       return existingOrder;
+    }
+
+    // 1b. Baca pengaturan operasional platform (MAINTENANCE_MODE, PLATFORM_FEE, PAYMENT_EXPIRY_MINUTES)
+    const platformSettings = await SystemSettingService.getSettings();
+    if (platformSettings.maintenanceMode) {
+      throw new Error(
+        'MAINTENANCE_MODE: Sistem sedang dalam mode pemeliharaan sementara. Pemesanan baru dinonaktifkan untuk sementara waktu.'
+      );
     }
 
     const isGuestOrder = !user || !!input.isGuest;
@@ -211,9 +220,10 @@ export class OrderService {
         // B. RESERVASI KAPASITAS SLOT ATOMIK (BR-04)
         await PickupSlotService.reserveSlot(tx, slot.id);
 
-        // Hitung total biaya
+        // Hitung total biaya berdasarkan PLATFORM_FEE terkini di system_settings
         const pricing = Pricing.calculateTotals(
-          itemsToOrder.map((i) => ({ price: i.priceSnapshot, quantity: i.quantity }))
+          itemsToOrder.map((i) => ({ price: i.priceSnapshot, quantity: i.quantity })),
+          platformSettings.platformFee
         );
 
         // Generate nomor order dan pickup code unik
@@ -224,7 +234,9 @@ export class OrderService {
         }
 
         const now = new Date();
-        const expiresAt = new Date(now.getTime() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+        const expiresAt = new Date(
+          now.getTime() + platformSettings.paymentExpiryMinutes * 60 * 1000
+        );
         const guestToken = isGuestOrder ? generateUUID() : null;
 
         // C. BUAT ORDER RECORD

@@ -23,6 +23,7 @@ import {
 } from '../providers/payment/xendit-payment-provider';
 import { OrderService } from './order.service';
 import { NotificationService } from './notification.service';
+import { SystemSettingService } from './system-setting.service';
 
 interface StoredPaymentData {
   qrPayload?: string;
@@ -167,8 +168,10 @@ export class PaymentService {
     const successUrl = `${appBaseUrl}/orders/${order.id}${tokenQuery ? `?${tokenQuery}&payment=success` : '?payment=success'}`;
     const failureUrl = `${appBaseUrl}/orders/${order.id}/pay${tokenQuery ? `?${tokenQuery}&payment=failed` : '?payment=failed'}`;
 
+    const platformSettings = await SystemSettingService.getSettings();
     const chargeExpiresAt =
-      order.expiresAt || new Date(now.getTime() + OrderService.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+      order.expiresAt ||
+      new Date(now.getTime() + platformSettings.paymentExpiryMinutes * 60 * 1000);
     const shortSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
     const externalReference = `${order.orderNumber}-${resolvedChannelCode}-${shortSuffix}`;
 

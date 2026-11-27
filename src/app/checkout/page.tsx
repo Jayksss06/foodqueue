@@ -32,7 +32,7 @@ const GUEST_ORDERS_STORAGE_KEY = 'foodqueue_guest_orders';
 export default function CheckoutPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { cart, refreshCart, clearCart, updateItem, removeItem } = useCart();
+  const { cart, maintenanceMode, refreshCart, clearCart, updateItem, removeItem } = useCart();
 
   // Guest inputs
   const [guestName, setGuestName] = useState('');
@@ -324,6 +324,27 @@ export default function CheckoutPage() {
             <span style={{ color: 'var(--color-border)' }}>•</span>
             <span style={{ color: 'var(--color-ink-400)' }}>3. Bayar</span>
           </div>
+
+          {maintenanceMode && (
+            <div
+              style={{
+                padding: '0.875rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#991B1B',
+                fontSize: '0.875rem',
+                fontWeight: 650,
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              Platform sedang dalam Mode Pemeliharaan (Maintenance). Pemesanan baru sementara dinonaktifkan.
+            </div>
+          )}
 
           {errorMessage && (
             <div
@@ -696,12 +717,12 @@ export default function CheckoutPage() {
 
           <Button
             size="lg"
-            disabled={!selectedSlot}
+            disabled={!selectedSlot || maintenanceMode}
             loading={submitting}
             onClick={handleCheckoutSubmit}
             style={{ minWidth: '150px', flexShrink: 0 }}
           >
-            Lanjut Bayar
+            {maintenanceMode ? 'Maintenance' : 'Lanjut Bayar'}
           </Button>
         </div>
       </div>

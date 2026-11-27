@@ -531,10 +531,12 @@ async function main() {
     },
   });
 
-  // 12. Inisialisasi System Settings
+  // 12. Inisialisasi System Settings (key kanonik selaras dengan Admin Settings & SystemSettingService)
   const settings = [
-    { key: 'service_fee', value: '1000', description: 'Biaya layanan platform per pesanan (Rupiah)' },
-    { key: 'payment_timeout_minutes', value: '15', description: 'Batas waktu pembayaran pesanan (menit)' },
+    { key: 'PLATFORM_FEE', value: '1000', description: 'Biaya layanan platform per pesanan (Rupiah)' },
+    { key: 'PAYMENT_EXPIRY_MINUTES', value: '15', description: 'Batas waktu pembayaran pesanan (menit)' },
+    { key: 'SLOT_DURATION_MINUTES', value: '15', description: 'Durasi standar interval jendela waktu pickup (menit)' },
+    { key: 'MAINTENANCE_MODE', value: 'false', description: 'Mode pemeliharaan platform' },
     { key: 'booking_days_ahead', value: '2', description: 'Jumlah hari ke depan yang dapat dipesan' },
     { key: 'no_show_grace_minutes', value: '60', description: 'Batas toleransi kehadiran sebelum ditandai no-show' },
     { key: 'baseline_wait_minutes', value: '25', description: 'Rata-rata waktu tunggu manual sebelum sistem (menit)' },

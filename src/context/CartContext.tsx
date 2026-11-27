@@ -18,6 +18,8 @@ export interface AddItemMenuDetails {
 interface CartContextType {
   cart: CartView | null;
   loading: boolean;
+  platformFee: number;
+  maintenanceMode: boolean;
   refreshCart: () => Promise<void>;
   addItem: (
     menuId: string,
@@ -34,6 +36,8 @@ interface CartContextType {
 const CartContext = createContext<CartContextType>({
   cart: null,
   loading: false,
+  platformFee: Pricing.DEFAULT_SERVICE_FEE,
+  maintenanceMode: false,
   refreshCart: async () => {},
   addItem: async () => ({ success: false }),
   updateItem: async () => {},
@@ -41,11 +45,27 @@ const CartContext = createContext<CartContextType>({
   clearCart: async () => {},
 });
 
+function recalculateCartWithFee(cartData: CartView | null, serviceFee: number): CartView | null {
+  if (!cartData || !cartData.items || cartData.items.length === 0) return null;
+  const pricing = Pricing.calculateTotals(
+    cartData.items.map((i) => ({ price: i.price, quantity: i.quantity })),
+    serviceFee
+  );
+  return {
+    ...cartData,
+    subtotal: pricing.subtotal,
+    fee: pricing.fee,
+    total: pricing.total,
+    itemCount: pricing.itemCount,
+  };
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartView | null>(null);
   const [loading, setLoading] = useState(false);
+  const [platformFee, setPlatformFee] = useState<number>(Pricing.DEFAULT_SERVICE_FEE);
+  const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false);
 
-  // Helper untuk membaca keranjang dari localStorage
   const loadCartFromStorage = (): CartView | null => {
     if (typeof window === 'undefined') return null;
     try {
@@ -74,7 +94,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCart = useCallback(async () => {
     const loaded = loadCartFromStorage();
-    setCart(loaded);
+    setCart(recalculateCartWithFee(loaded, platformFee));
+  }, [platformFee]);
+
+  // Muat pengaturan operasional publik (PLATFORM_FEE & MAINTENANCE_MODE) dari server
+  useEffect(() => {
+    let active = true;
+    fetch('/api/settings/public')
+      .then((res) => res.json())
+      .then((json) => {
+        if (!active || !json?.data) return;
+        const nextFee =
+          typeof json.data.platformFee === 'number'
+            ? json.data.platformFee
+            : Pricing.DEFAULT_SERVICE_FEE;
+        const nextMaintenance = Boolean(json.data.maintenanceMode);
+        setPlatformFee(nextFee);
+        setMaintenanceMode(nextMaintenance);
+
+        const loaded = loadCartFromStorage();
+        const recalculated = recalculateCartWithFee(loaded, nextFee);
+        if (recalculated) {
+          saveCartToStorage(recalculated);
+          setCart(recalculated);
+        }
+      })
+      .catch(() => {
+        // Fallback ke default fee jika offline
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -109,7 +160,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const tenantId = menuDetails?.tenantId || currentCart?.tenantId || '';
     const tenantName = menuDetails?.tenantName || currentCart?.tenantName || 'Stan Makanan';
-    let items: CartItemView[] = currentCart ? [...currentCart.items] : [];
+    const items: CartItemView[] = currentCart ? [...currentCart.items] : [];
 
     const existingIdx = items.findIndex((i) => i.menuId === menuId);
     if (existingIdx >= 0 && items[existingIdx]) {
@@ -141,7 +192,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     const pricing = Pricing.calculateTotals(
-      items.map((i) => ({ price: i.price, quantity: i.quantity }))
+      items.map((i) => ({ price: i.price, quantity: i.quantity })),
+      platformFee
     );
 
     const updatedCart: CartView = {
@@ -185,7 +237,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     const pricing = Pricing.calculateTotals(
-      items.map((i) => ({ price: i.price, quantity: i.quantity }))
+      items.map((i) => ({ price: i.price, quantity: i.quantity })),
+      platformFee
     );
 
     const updatedCart: CartView = {
@@ -212,7 +265,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     const pricing = Pricing.calculateTotals(
-      items.map((i) => ({ price: i.price, quantity: i.quantity }))
+      items.map((i) => ({ price: i.price, quantity: i.quantity })),
+      platformFee
     );
 
     const updatedCart: CartView = {
@@ -238,6 +292,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       value={{
         cart,
         loading,
+        platformFee,
+        maintenanceMode,
         refreshCart,
         addItem,
         updateItem,

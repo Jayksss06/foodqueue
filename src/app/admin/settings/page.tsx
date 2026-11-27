@@ -27,6 +27,12 @@ export default function AdminSettingsPage() {
     simulationEnabled: boolean;
     webhookConfigured: boolean;
   } | null>(null);
+  const [jwtSecurity, setJwtSecurity] = useState<{
+    configured: boolean;
+    meetsMinLength: boolean;
+    isWeakDefault: boolean;
+    status: 'STRONG' | 'WEAK_DEFAULT' | 'MISCONFIGURED';
+  } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,21 +40,40 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/admin/settings').then((res) => res.json()),
+      fetch('/api/admin/settings?includeSecurity=true').then((res) => res.json()),
       fetch('/api/payments/config').then((res) => res.json()).catch(() => null),
     ])
       .then(([json, paymentJson]) => {
         if (paymentJson?.data) {
           setPaymentRuntime(paymentJson.data);
         }
-        if (json.data && Array.isArray(json.data)) {
-          for (const item of json.data) {
-            if (item.key === 'PLATFORM_FEE') setPlatformFee(item.value);
-            if (item.key === 'PAYMENT_EXPIRY_MINUTES') setPaymentExpiry(item.value);
-            if (item.key === 'SLOT_DURATION_MINUTES') setSlotDuration(item.value);
-            if (item.key === 'MAINTENANCE_MODE') setMaintenanceMode(item.value === 'true');
-            if (item.key === 'MOCK_PAYMENT_ENABLED') setMockPayment(item.value === 'true');
-          }
+        const rawList = Array.isArray(json.data)
+          ? json.data
+          : Array.isArray(json.data?.settings)
+            ? json.data.settings
+            : [];
+        if (json.data?.jwtSecurity) {
+          setJwtSecurity(json.data.jwtSecurity);
+        }
+
+        const map = new Map<string, string>();
+        for (const item of rawList) {
+          map.set(item.key, item.value);
+        }
+        if (map.has('PLATFORM_FEE') || map.has('service_fee')) {
+          setPlatformFee(map.get('PLATFORM_FEE') ?? map.get('service_fee') ?? '1000');
+        }
+        if (map.has('PAYMENT_EXPIRY_MINUTES') || map.has('payment_timeout_minutes')) {
+          setPaymentExpiry(map.get('PAYMENT_EXPIRY_MINUTES') ?? map.get('payment_timeout_minutes') ?? '15');
+        }
+        if (map.has('SLOT_DURATION_MINUTES')) {
+          setSlotDuration(map.get('SLOT_DURATION_MINUTES') ?? '15');
+        }
+        if (map.has('MAINTENANCE_MODE')) {
+          setMaintenanceMode(map.get('MAINTENANCE_MODE') === 'true');
+        }
+        if (map.has('MOCK_PAYMENT_ENABLED')) {
+          setMockPayment(map.get('MOCK_PAYMENT_ENABLED') === 'true');
         }
       })
       .catch((err) => console.error(err))
@@ -240,6 +265,18 @@ export default function AdminSettingsPage() {
                   {paymentRuntime.simulationEnabled ? 'Aktif (Local Dev)' : 'Terkunci (Production Safe)'}
                 </div>
               </div>
+              {jwtSecurity && (
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Keamanan JWT Secret</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem', marginTop: '0.15rem', color: jwtSecurity.status === 'STRONG' ? 'var(--color-forest)' : '#DC2626' }}>
+                    {jwtSecurity.status === 'STRONG'
+                      ? 'Kuat & Terkonfigurasi'
+                      : jwtSecurity.status === 'WEAK_DEFAULT'
+                        ? 'Peringatan: Masih Default Lama!'
+                        : 'Belum Terkonfigurasi'}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
