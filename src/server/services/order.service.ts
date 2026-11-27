@@ -11,6 +11,7 @@ import { getPaymentProviderByName } from '../providers/payment/payment-provider.
 
 export class OrderService {
   public static readonly PAYMENT_TIMEOUT_MINUTES = 15;
+  public static readonly MAX_ACTIVE_UNPAID_ORDERS = 3;
 
   /**
    * Membuat nomor pesanan unik berurutan per tahun: FQ-2026-00001
@@ -76,6 +77,22 @@ export class OrderService {
       if (!input.guestPhone || !/^(\+62|62|0)8[1-9][0-9]{6,10}$/.test(input.guestPhone.trim())) {
         throw new Error('GUEST_PHONE_REQUIRED: Nomor WhatsApp / HP tidak valid.');
       }
+    }
+
+    // 1c. Database-backed Anti-Spam Guard: batasi pesanan PENDING_PAYMENT aktif per user/nomor WA
+    const activeUnpaidWhere = user && !isGuestOrder
+      ? { userId: user.id, status: 'PENDING_PAYMENT' as const, expiresAt: { gt: new Date() } }
+      : {
+          isGuest: true,
+          guestPhone: input.guestPhone!.trim(),
+          status: 'PENDING_PAYMENT' as const,
+          expiresAt: { gt: new Date() },
+        };
+    const activeUnpaidCount = await prisma.order.count({ where: activeUnpaidWhere });
+    if (activeUnpaidCount >= this.MAX_ACTIVE_UNPAID_ORDERS) {
+      throw new Error(
+        `TOO_MANY_PENDING_ORDERS: Anda masih memiliki ${activeUnpaidCount} pesanan yang menunggu pembayaran. Selesaikan atau batalkan pesanan sebelumnya terlebih dahulu.`
+      );
     }
 
     // 2. Jalankan transaksi atomik untuk reservasi stok, kapasitas slot, dan pembuatan order

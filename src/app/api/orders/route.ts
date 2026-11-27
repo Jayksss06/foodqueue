@@ -4,10 +4,27 @@ import { checkoutSchema } from '@/validators';
 import { OrderService } from '@/server/services/order.service';
 import { apiSuccess } from '@/server/http/response';
 import { handleRouteError } from '@/server/http/error-handler';
+import {
+  checkRateLimit,
+  createRateLimitExceededResponse,
+  getClientIp,
+} from '@/server/http/rate-limit';
 import { prisma } from '@/lib/prisma';
 
 export const POST = withOptionalAuth(async (req: NextRequest, ctx: OptionalAuthContext) => {
   try {
+    const rateLimit = await checkRateLimit(ctx.user?.id || getClientIp(req), {
+      namespace: 'orders:create',
+      limit: 8,
+      windowSeconds: 60,
+    });
+    if (!rateLimit.allowed) {
+      return createRateLimitExceededResponse(
+        rateLimit,
+        'Terlalu banyak permintaan pembuatan pesanan dalam waktu singkat. Silakan tunggu sebentar.'
+      );
+    }
+
     const body = await req.json();
     const validated = checkoutSchema.parse(body);
 

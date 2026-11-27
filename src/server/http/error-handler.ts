@@ -27,6 +27,8 @@ const ERROR_PREFIX_STATUS_MAP: Array<{ prefix: string; status: number }> = [
   { prefix: 'MENU_OUT_OF_STOCK:', status: 409 },
   { prefix: 'PRICE_CHANGED:', status: 409 },
   { prefix: 'PAYMENT_AMOUNT_MISMATCH:', status: 400 },
+  { prefix: 'TOO_MANY_PENDING_ORDERS:', status: 429 },
+  { prefix: 'RATE_LIMIT_EXCEEDED:', status: 429 },
   { prefix: 'AUTH_CONFIG_ERROR:', status: 503 },
   { prefix: 'MAINTENANCE_MODE:', status: 503 },
   { prefix: 'PAYMENT_CONFIG_ERROR:', status: 503 },
