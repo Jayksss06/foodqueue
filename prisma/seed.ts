@@ -1,10 +1,25 @@
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+function resolveSeedPassword(envName: string): string {
+  const fromEnv = process.env[envName]?.trim();
+  if (fromEnv && fromEnv.length >= 12) {
+    return fromEnv;
+  }
+  return `Fq!${crypto.randomBytes(12).toString('base64url')}`;
+}
+
 async function main() {
-  console.log('[SEED] Memulai proses seeding data realistis FoodQueue...');
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[BLOCKED] Script prisma/seed.ts dilarang dijalankan pada NODE_ENV=production karena menghapus seluruh data tabel.'
+    );
+  }
+
+  console.log('[SEED] Memulai proses seeding data realistis FoodQueue (Local Development)...');
 
   // 1. Bersihkan data lama jika ada
   await prisma.review.deleteMany();
@@ -35,10 +50,14 @@ async function main() {
     },
   });
 
-  // 3. Password hash
-  const adminPass = await bcrypt.hash('Admin123!', 10);
-  const tenantPass = await bcrypt.hash('Tenant123!', 10);
-  const userPass = await bcrypt.hash('User123!', 10);
+  // 3. Password hash (tidak menggunakan password statis hardcoded)
+  const adminPlain = resolveSeedPassword('SEED_ADMIN_PASSWORD');
+  const tenantPlain = resolveSeedPassword('SEED_TENANT_PASSWORD');
+  const userPlain = resolveSeedPassword('SEED_USER_PASSWORD');
+
+  const adminPass = await bcrypt.hash(adminPlain, 12);
+  const tenantPass = await bcrypt.hash(tenantPlain, 12);
+  const userPass = await bcrypt.hash(userPlain, 12);
 
   // 4. Buat Akun Users
   // Admin
@@ -538,11 +557,11 @@ async function main() {
 
   console.log('[SUCCESS] Seeding berhasil diselesaikan!');
   console.log('----------------------------------------------------');
-  console.log('Akun Demo:');
-  console.log('1. Admin: admin@foodqueue.id | Password: Admin123!');
-  console.log('2. Tenant Sari: tenant.sari@foodqueue.id | Password: Tenant123!');
-  console.log('3. Tenant Kencana: tenant.kencana@foodqueue.id | Password: Tenant123!');
-  console.log('4. Customer Rina: rina@mahasiswa.ac.id | Password: User123!');
+  console.log('Akun Local Development (simpan kredensial acak ini jika tidak memakai env SEED_*_PASSWORD):');
+  console.log(`1. Admin: admin@foodqueue.id | Password: ${adminPlain}`);
+  console.log(`2. Tenant Sari: tenant.sari@foodqueue.id | Password: ${tenantPlain}`);
+  console.log(`3. Tenant Kencana: tenant.kencana@foodqueue.id | Password: ${tenantPlain}`);
+  console.log(`4. Customer Rina: rina@mahasiswa.ac.id | Password: ${userPlain}`);
   console.log('----------------------------------------------------');
 }
 

@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { UtensilsCrossed, Sparkles } from 'lucide-react';
+import { UtensilsCrossed } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -37,12 +37,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoFill = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError(null);
   };
 
   return (
@@ -118,84 +112,6 @@ export default function LoginPage() {
                 Pesan Makanan Langsung di Sini →
               </Link>
             </div>
-          </div>
-        </div>
-
-        {/* Demo Accounts Pill Switcher */}
-        <div
-          style={{
-            padding: '0.85rem',
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              color: 'var(--color-primary-600)',
-              marginBottom: '0.5rem',
-            }}
-          >
-            <Sparkles size={14} /> AKUN DEMO PENGUJIAN PENGELOLA:
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-            <button
-              type="button"
-              onClick={() => handleDemoFill('tenant.sari@foodqueue.id', 'Tenant123!')}
-              style={{
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-primary-50)',
-                border: '1px solid var(--color-primary-200)',
-                color: 'var(--color-ink-900)',
-                cursor: 'pointer',
-              }}
-            >
-              Tenant 1: Bu Sari
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDemoFill('tenant.kencana@foodqueue.id', 'Tenant123!')}
-              style={{
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-primary-50)',
-                border: '1px solid var(--color-primary-200)',
-                color: 'var(--color-ink-900)',
-                cursor: 'pointer',
-              }}
-            >
-              Tenant 2: Mas Dimas
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDemoFill('admin@foodqueue.id', 'Admin123!')}
-              style={{
-                padding: '0.35rem 0.65rem',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--color-primary-50)',
-                border: '1px solid var(--color-primary-200)',
-                color: 'var(--color-ink-900)',
-                cursor: 'pointer',
-              }}
-            >
-              Admin: Budi
-            </button>
           </div>
         </div>
 

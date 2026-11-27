@@ -51,16 +51,16 @@ Platform ini dibangun secara *production-ready* dengan standar arsitektur bersih
 
 ---
 
-## 👥 Akun Demo untuk Pengujian Cepat
+## 👥 Akses Portal Pengelola (Keamanan Produksi)
 
-Di halaman login (`/login`), tersedia tombol **1-Click Demo Login** untuk memudahkan demonstrasi sidang tanpa perlu mengetik:
+Tombol *1-Click Demo Login* dan kata sandi statis telah dihapus demi keamanan produksi. Untuk lingkungan pengembangan lokal (`NODE_ENV=development`), jalankan `npx tsx prisma/seed.ts` — kata sandi akun awal akan digenerate secara acak atau dibaca dari variabel lingkungan `SEED_ADMIN_PASSWORD`, `SEED_TENANT_PASSWORD`, dan `SEED_USER_PASSWORD`.
 
-| Peran | Akun Email | Kata Sandi | Keterangan |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@foodqueue.id` | `Admin123!` | Akses penuh dashboard admin & SDG impact |
-| **Tenant** | `tenant.sari@foodqueue.id` | `Tenant123!` | Dapur Warung Bu Sari (Lantai 2, Stand A-03) |
-| **Tenant** | `tenant.kencana@foodqueue.id` | `Tenant123!` | Dapur Ayam Kencana (Lantai 2, Stand B-01) |
-| **Customer** | `rina@mahasiswa.ac.id` | `User123!` | Akun mahasiswa (sudah ada riwayat pesanan) |
+| Peran | Akun Email | Keterangan |
+| :--- | :--- | :--- |
+| **Admin** | `admin@foodqueue.id` | Akses penuh dashboard admin & SDG impact |
+| **Tenant** | `tenant.sari@foodqueue.id` | Dapur Warung Bu Sari (Lantai 2, Stand A-03) |
+| **Tenant** | `tenant.kencana@foodqueue.id` | Dapur Ayam Kencana (Lantai 2, Stand B-01) |
+| **Customer** | `rina@mahasiswa.ac.id` | Akun mahasiswa (pembeli umum dapat langsung pesan via *Guest Checkout*) |
 
 ---
 
