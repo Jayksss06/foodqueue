@@ -47,6 +47,17 @@ export const createMenuSchema = z.object({
 
 export const updateMenuSchema = createMenuSchema.partial();
 
+export const resetMenuStockSchema = z.object({
+  defaultStock: z
+    .number()
+    .int('Stok harian harus berupa bilangan bulat')
+    .min(1, 'Stok harian minimal 1 porsi')
+    .max(500, 'Stok harian maksimal 500 porsi')
+    .default(30),
+  includeUnavailable: z.boolean().optional().default(false),
+  onlyLowStockBelow: z.number().int().min(1).max(500).optional(),
+});
+
 // ================= TENANT SETTINGS SCHEMAS =================
 export const updateTenantProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),

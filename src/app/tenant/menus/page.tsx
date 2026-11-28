@@ -12,9 +12,8 @@ import {
   Edit,
   Trash2,
   Clock,
-  PackageCheck,
-  PackageX,
-  AlertCircle
+  RotateCcw,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function TenantMenusPage() {
@@ -26,6 +25,13 @@ export default function TenantMenusPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Daily stock reset modal
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetStockValue, setResetStockValue] = useState('30');
+  const [includeUnavailable, setIncludeUnavailable] = useState(false);
+  const [resettingStock, setResettingStock] = useState(false);
+  const [resetBanner, setResetBanner] = useState<string | null>(null);
 
   // Form fields
   const [name, setName] = useState('');
@@ -122,7 +128,7 @@ export default function TenantMenusPage() {
       }
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Gagal menyimpan menu.');
+      if (!res.ok) throw new Error(data.error?.message || data.message || 'Gagal menyimpan menu.');
 
       setModalOpen(false);
       await fetchMenus();
@@ -130,6 +136,41 @@ export default function TenantMenusPage() {
       alert(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResetDailyStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsedStock = parseInt(resetStockValue, 10);
+    if (Number.isNaN(parsedStock) || parsedStock < 1 || parsedStock > 500) {
+      alert('Masukkan jumlah stok harian antara 1 hingga 500 porsi.');
+      return;
+    }
+
+    try {
+      setResettingStock(true);
+      const res = await fetch('/api/tenant/menus/reset-stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          defaultStock: parsedStock,
+          includeUnavailable,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error?.message || data.message || 'Gagal mereset stok harian.');
+      }
+
+      setResetModalOpen(false);
+      setResetBanner(
+        data.data?.message || `Stok menu berhasil direset menjadi ${parsedStock} porsi.`
+      );
+      await fetchMenus();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setResettingStock(false);
     }
   };
 
@@ -179,14 +220,72 @@ export default function TenantMenusPage() {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={openCreateModal}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <Plus size={18} /> Tambah Menu Baru
-        </Button>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {menus.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResetBanner(null);
+                setResetModalOpen(true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                borderColor: 'var(--color-forest)',
+                color: 'var(--color-forest)',
+              }}
+            >
+              <RotateCcw size={16} /> Reset Stok Harian
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            onClick={openCreateModal}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Plus size={18} /> Tambah Menu Baru
+          </Button>
+        </div>
       </div>
+
+      {resetBanner && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            padding: '0.85rem 1.1rem',
+            marginBottom: '1.25rem',
+            borderRadius: 'var(--radius-md)',
+            background: '#ECFDF5',
+            border: '1px solid #A7F3D0',
+            color: '#065F46',
+            fontSize: '0.875rem',
+            fontWeight: 650,
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <CheckCircle2 size={18} color="var(--color-forest)" />
+            {resetBanner}
+          </span>
+          <button
+            type="button"
+            onClick={() => setResetBanner(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#065F46',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+            }}
+          >
+            Tutup
+          </button>
+        </div>
+      )}
 
       {/* Grid of Menus */}
       {loading ? (
@@ -517,6 +616,106 @@ export default function TenantMenusPage() {
             </Button>
             <Button variant="primary" type="submit" disabled={submitting}>
               {submitting ? 'Menyimpan...' : editingMenu ? 'Perbarui Menu' : 'Tambah ke Katalog'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 1-Click Daily Stock Reset Modal */}
+      <Modal
+        isOpen={resetModalOpen}
+        onClose={() => setResetModalOpen(false)}
+        title="Buka Hari Baru — Reset Stok Harian"
+      >
+        <form onSubmit={handleResetDailyStock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', lineHeight: 1.5, margin: 0 }}>
+            Isi ulang stok seluruh menu aktif sekaligus dan ubah menu berstatus <strong>Habis</strong> kembali menjadi{' '}
+            <strong>Tersedia</strong> dalam 1 klik.
+          </p>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 650, marginBottom: '0.45rem' }}>
+              Pilih Jumlah Stok Standar (Porsi per Menu):
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.65rem' }}>
+              {['20', '30', '50', '100'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setResetStockValue(preset)}
+                  style={{
+                    flex: 1,
+                    padding: '0.45rem 0.5rem',
+                    borderRadius: 'var(--radius-md)',
+                    border:
+                      resetStockValue === preset
+                        ? '1.5px solid var(--color-forest)'
+                        : '1px solid var(--color-border)',
+                    background: resetStockValue === preset ? '#ECFDF5' : '#FFFFFF',
+                    color: resetStockValue === preset ? 'var(--color-forest)' : 'var(--color-text)',
+                    fontWeight: 750,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {preset} porsi
+                </button>
+              ))}
+            </div>
+            <input
+              type="number"
+              required
+              min={1}
+              max={500}
+              value={resetStockValue}
+              onChange={(e) => setResetStockValue(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.65rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--color-border)',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+              }}
+            />
+          </div>
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.55rem',
+              fontSize: '0.82rem',
+              color: 'var(--color-text)',
+              cursor: 'pointer',
+              padding: '0.65rem 0.75rem',
+              borderRadius: 'var(--radius-md)',
+              background: '#F9FAFB',
+              border: '1px solid var(--color-border)',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={includeUnavailable}
+              onChange={(e) => setIncludeUnavailable(e.target.checked)}
+              style={{ marginTop: '2px' }}
+            />
+            <span>
+              Sertakan menu yang berstatus <strong>Dinonaktifkan</strong> (secara default hanya menu Tersedia & Habis yang direset).
+            </span>
+          </label>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
+            <Button variant="outline" type="button" onClick={() => setResetModalOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={resettingStock}
+              style={{ background: 'var(--color-forest)' }}
+            >
+              {resettingStock ? 'Mereset Stok...' : `Reset ke ${resetStockValue || '0'} Porsi`}
             </Button>
           </div>
         </form>
