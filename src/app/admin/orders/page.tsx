@@ -9,16 +9,49 @@ import {
   ClipboardList,
   Search,
   RefreshCw,
-  Store,
-  Clock,
-  Calendar
+  Download,
 } from 'lucide-react';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      const url =
+        statusFilter === 'ALL'
+          ? '/api/admin/orders/export'
+          : `/api/admin/orders/export?status=${encodeURIComponent(statusFilter)}`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error?.message || 'Gagal mengunduh CSV settlement.');
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] || 'foodqueue-settlement-admin.csv';
+
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengunduh CSV settlement.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -76,16 +109,34 @@ export default function AdminOrdersPage() {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchOrders}
-          disabled={loading}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          Segarkan
-        </Button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={exporting}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: 'var(--color-forest)',
+            }}
+          >
+            <Download size={14} />
+            {exporting ? 'Mengunduh...' : 'Export CSV Settlement'}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchOrders}
+            disabled={loading}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            Segarkan
+          </Button>
+        </div>
       </div>
 
       {/* Filter Tabs & Search */}

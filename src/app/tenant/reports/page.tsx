@@ -10,14 +10,44 @@ import {
   DollarSign,
   TrendingUp,
   ShoppingBag,
-  Clock,
   Printer,
-  Calendar
+  Download,
 } from 'lucide-react';
 
 export default function TenantReportsPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [exportRange, setExportRange] = useState<'7' | '30' | 'all'>('30');
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      const res = await fetch(`/api/tenant/reports/export?days=${exportRange}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error?.message || 'Gagal mengunduh laporan CSV.');
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] || `foodqueue-laporan-tenant.csv`;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengunduh laporan CSV.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     fetch('/api/tenant/dashboard')
@@ -59,14 +89,50 @@ export default function TenantReportsPage() {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.print()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <Printer size={15} /> Cetak Laporan
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <select
+            aria-label="Rentang periode ekspor CSV"
+            value={exportRange}
+            onChange={(e) => setExportRange(e.target.value as '7' | '30' | 'all')}
+            style={{
+              padding: '0.45rem 0.65rem',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-border)',
+              background: '#FFFFFF',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              color: 'var(--color-text)',
+            }}
+          >
+            <option value="7">7 Hari Terakhir</option>
+            <option value="30">30 Hari Terakhir</option>
+            <option value="all">Semua Riwayat</option>
+          </select>
+
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={exporting}
+            onClick={handleExportCsv}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: 'var(--color-forest)',
+            }}
+          >
+            <Download size={15} /> {exporting ? 'Mengunduh...' : 'Export CSV'}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Printer size={15} /> Cetak Laporan
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -124,7 +190,7 @@ export default function TenantReportsPage() {
           Dampak Efisiensi Operasional (SDG 8 & SDG 12)
         </h4>
         <p style={{ fontSize: '0.85rem', color: '#065F46', lineHeight: 1.5 }}>
-          Dengan model pre-order FoodQueue, estimasi bahan sisa berkurang signifikan karena porsi diproduksi sesuai slot terpesona. Hal ini menghemat biaya modal harian UMKM kantin hingga 15–20% dibandingkan sistem antrean langsung.
+          Dengan model pre-order FoodQueue, estimasi bahan sisa berkurang signifikan karena porsi diproduksi sesuai slot terpesan. Hal ini menghemat biaya modal harian UMKM kantin hingga 15–20% dibandingkan sistem antrean langsung.
         </p>
       </Card>
     </div>
